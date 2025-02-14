@@ -1,5 +1,4 @@
 import { expect, test } from 'vitest';
-import { nanoid } from 'nanoid';
 import { IChatOptions } from '@novu/stateless';
 import { WhatsappBusinessChatProvider } from './whatsapp-business.provider';
 import { axiosSpy } from '../../../utils/test/spy-axios';
@@ -9,20 +8,26 @@ const mockProviderConfig = {
   phoneNumberIdentification: '1234567890',
 };
 
-const buildResponse = (messageId: string) => {
-  return {
-    data: {
-      messaging_product: 'whatsapp',
-      contacts: [{ input: 'Any input', wa_id: nanoid() }],
-      messages: [{ id: messageId }],
-    },
-  };
-};
+const buildResponse = () => ({
+  data: {
+    messaging_product: 'whatsapp',
+    contacts: [{ input: 'Any input', wa_id: 'contact-id' }],
+    messages: [{ id: 'message-id' }],
+  },
+});
+
+const baseUrl = (phoneNumberIdentification: string) =>
+  `https://graph.facebook.com/v18.0/${phoneNumberIdentification}/messages`;
+
+const expectedHeaders = (accessToken: string) => ({
+  headers: {
+    Authorization: `Bearer ${accessToken}`,
+    'Content-Type': 'application/json',
+  },
+});
 
 test('should trigger whatsapp-business library correctly with simple text message', async () => {
-  const messageId = nanoid();
-
-  const { mockPost, axiosMockSpy } = axiosSpy(buildResponse(messageId));
+  const { mockPost, axiosMockSpy } = axiosSpy(buildResponse());
 
   const provider = new WhatsappBusinessChatProvider(mockProviderConfig);
 
@@ -47,13 +52,11 @@ test('should trigger whatsapp-business library correctly with simple text messag
 
   expect(axiosMockSpy).toHaveBeenCalledWith(expectedHeaders(mockProviderConfig.accessToken));
 
-  expect(res.id).toBe(messageId);
+  expect(res.id).toBe('message-id');
 });
 
 test('should trigger whatsapp-business library correctly with template message', async () => {
-  const messageId = nanoid();
-
-  const { mockPost, axiosMockSpy } = axiosSpy(buildResponse(messageId));
+  const { mockPost, axiosMockSpy } = axiosSpy(buildResponse());
 
   const provider = new WhatsappBusinessChatProvider(mockProviderConfig);
 
@@ -83,13 +86,11 @@ test('should trigger whatsapp-business library correctly with template message',
 
   expect(axiosMockSpy).toHaveBeenCalledWith(expectedHeaders(mockProviderConfig.accessToken));
 
-  expect(res.id).toBe(messageId);
+  expect(res.id).toBe('message-id');
 });
 
 test('should trigger whatsapp-business library correctly with simple text message with _passthrough', async () => {
-  const messageId = nanoid();
-
-  const { mockPost, axiosMockSpy } = axiosSpy(buildResponse(messageId));
+  const { mockPost, axiosMockSpy } = axiosSpy(buildResponse());
 
   const provider = new WhatsappBusinessChatProvider(mockProviderConfig);
 
@@ -122,13 +123,11 @@ test('should trigger whatsapp-business library correctly with simple text messag
 
   expect(axiosMockSpy).toHaveBeenCalledWith(expectedHeaders(mockProviderConfig.accessToken));
 
-  expect(res.id).toBe(messageId);
+  expect(res.id).toBe('message-id');
 });
 
 test('should trigger whatsapp-business library correctly with template message with _passthrough', async () => {
-  const messageId = nanoid();
-
-  const { mockPost, axiosMockSpy } = axiosSpy(buildResponse(messageId));
+  const { mockPost, axiosMockSpy } = axiosSpy(buildResponse());
 
   const provider = new WhatsappBusinessChatProvider(mockProviderConfig);
 
@@ -174,18 +173,5 @@ test('should trigger whatsapp-business library correctly with template message w
 
   expect(axiosMockSpy).toHaveBeenCalledWith(expectedHeaders(mockProviderConfig.accessToken));
 
-  expect(res.id).toBe(messageId);
+  expect(res.id).toBe('message-id');
 });
-
-function baseUrl(phoneNumberIdentification: string) {
-  return `https://graph.facebook.com/v18.0/${phoneNumberIdentification}/messages`;
-}
-
-function expectedHeaders(accessToken: string) {
-  return {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    },
-  };
-}

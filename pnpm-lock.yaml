@@ -11,7 +11,6 @@ overrides:
   get-func-name@<2.0.1: ^2.0.1
   glob-parent@<5.1.2: ^5.1.2
   minimatch@>=3.0.0 <3.0.5: ^3.0.5
-  nanoid@>=3.0.0 <3.1.31: ^3.1.31
   nth-check: ^2.1.1
   postcss@<8.4.31: ^8.4.31
   proxy-agent: ^6.3.0
@@ -522,9 +521,6 @@ importers:
       lodash:
         specifier: ^4.17.15
         version: 4.17.21
-      nanoid:
-        specifier: ^3.1.31
-        version: 3.3.6
       nest-raven:
         specifier: 10.1.0
         version: 10.1.0(@nestjs/common@10.4.1(class-transformer@0.5.1)(class-validator@0.14.1)(reflect-metadata@0.2.2)(rxjs@7.8.1))(@nestjs/core@10.4.1(@nestjs/common@10.4.1(class-transformer@0.5.1)(class-validator@0.14.1)(reflect-metadata@0.2.2)(rxjs@7.8.1))(@nestjs/platform-express@10.4.1)(@nestjs/websockets@10.4.1)(encoding@0.1.13)(reflect-metadata@0.2.2)(rxjs@7.8.1))(@sentry/node@8.33.1)(class-transformer@0.5.1)(class-validator@0.14.1)(graphql@16.9.0)(reflect-metadata@0.2.2)(rxjs@7.8.1)
@@ -573,9 +569,6 @@ importers:
       sanitize-html:
         specifier: ^2.4.0
         version: 2.10.0
-      shortid:
-        specifier: ^2.2.16
-        version: 2.2.16
       swagger-ui-express:
         specifier: ^4.4.0
         version: 4.6.2(express@5.0.1)
@@ -2098,9 +2091,6 @@ importers:
       rxjs:
         specifier: 7.8.1
         version: 7.8.1
-      shortid:
-        specifier: ^2.2.16
-        version: 2.2.16
       simple-statistics:
         specifier: ^7.8.3
         version: 7.8.3
@@ -2851,8 +2841,8 @@ importers:
         specifier: ^0.17.0
         version: 0.17.0
       nanoid:
-        specifier: ^3.1.31
-        version: 3.3.7
+        specifier: ^5.1.2
+        version: 5.1.2
       nestjs-otel:
         specifier: 6.1.1
         version: 6.1.1(@nestjs/common@10.4.1(class-transformer@0.5.1)(class-validator@0.14.1)(reflect-metadata@0.2.2)(rxjs@7.8.1))(@nestjs/core@10.4.1(@nestjs/common@10.4.1(class-transformer@0.5.1)(class-validator@0.14.1)(reflect-metadata@0.2.2)(rxjs@7.8.1))(@nestjs/platform-express@10.4.1)(@nestjs/websockets@10.4.1)(encoding@0.1.13)(reflect-metadata@0.2.2)(rxjs@7.8.1))
@@ -2889,9 +2879,6 @@ importers:
       sanitize-html:
         specifier: ^2.4.0
         version: 2.10.0
-      shortid:
-        specifier: ^2.2.16
-        version: 2.2.16
       zod:
         specifier: ^3.23.8
         version: 3.23.8
@@ -3594,6 +3581,9 @@ importers:
       jsonwebtoken:
         specifier: 9.0.0
         version: 9.0.0
+      nanoid:
+        specifier: ^5.1.2
+        version: 5.1.2
       ng-intercom:
         specifier: ^8.0.2
         version: 8.0.2
@@ -3603,9 +3593,6 @@ importers:
       rimraf:
         specifier: ^3.0.2
         version: 3.0.2
-      shortid:
-        specifier: ^2.2.16
-        version: 2.2.16
       superagent-defaults:
         specifier: ^0.1.14
         version: 0.1.14(superagent@10.1.0)
@@ -4459,9 +4446,6 @@ importers:
       messagebird:
         specifier: ^4.0.1
         version: 4.0.1
-      nanoid:
-        specifier: ^3.1.31
-        version: 3.3.7
       node-fetch:
         specifier: ^3.2.10
         version: 3.3.1
@@ -28548,24 +28532,24 @@ packages:
   nanoid@2.1.11:
     resolution: {integrity: sha512-s/snB+WGm6uwi0WjsZdaVcuf3KJXlfGl2LcxgwkEwJF0D/BWzVWAZW/XY4bFaiR7s0Jk3FPvlnepg1H1b1UwlA==}
 
+  nanoid@3.1.20:
+    resolution: {integrity: sha512-a1cQNyczgKbLX9jwbS/+d7W8fX/RfgYR7lVWwWOGIPNgK2m0MWvrGF6/m4kk6U3QcFMnZf3RIhL0v2Jgh/0Uxw==}
+    engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
+    hasBin: true
+
   nanoid@3.3.3:
     resolution: {integrity: sha512-p1sjXuopFs0xg+fPASzQ28agW1oHD7xDsd9Xkf3T15H3c/cifrFHVwrh74PdoklAPi+i7MdRsE47vm2r6JoB+w==}
-    engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
-    hasBin: true
-
-  nanoid@3.3.6:
-    resolution: {integrity: sha512-BGcqMMJuToF7i1rt+2PWSNVnWIkGCU78jBG3RxO/bZlnZPK2Cmi2QaffxGO/2RvWi9sL+FAiRiXMgsyxQ1DIDA==}
-    engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
-    hasBin: true
-
-  nanoid@3.3.7:
-    resolution: {integrity: sha512-eSRppjcPIatRIMC1U6UngP8XFcz8MQWGQdt1MTBQ7NaAmvXDfvNxbvWV3x2y6CdEUciCSsDHDQZbhYaB8QEo2g==}
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
 
   nanoid@3.3.8:
     resolution: {integrity: sha512-WNLf5Sd8oZxOm+TzppcYk8gVOgP+l58xNy58D0nbUnOxOWRWvlcCV4kUF7ltmI6PsrLl/BgKEyS4mqsGChFN0w==}
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
+    hasBin: true
+
+  nanoid@5.1.2:
+    resolution: {integrity: sha512-b+CiXQCNMUGe0Ri64S9SXFcP9hogjAJ2Rd6GdVxhPLRm7mhGaM7VgOvCAJ1ZshfHbqVDI3uqTI5C8/GaKuLI7g==}
+    engines: {node: ^18 || >=20}
     hasBin: true
 
   nanomatch@1.2.13:
@@ -45263,7 +45247,7 @@ snapshots:
       codex-notifier: 1.1.2
       codex-tooltip: 1.0.5
       html-janitor: 2.0.4
-      nanoid: 3.3.6
+      nanoid: 3.3.8
 
   '@editorjs/paragraph@2.9.0':
     dependencies:
@@ -53212,7 +53196,7 @@ snapshots:
       lodash: 4.17.21
       lodash-es: 4.17.21
       markdown-to-jsx: 7.4.1(react@18.3.1)
-      nanoid: 3.3.7
+      nanoid: 3.3.8
       prop-types: 15.8.1
       react: 18.3.1
 
@@ -53222,7 +53206,7 @@ snapshots:
       lodash: 4.17.21
       lodash-es: 4.17.21
       markdown-to-jsx: 7.4.1(react@18.3.1)
-      nanoid: 3.3.7
+      nanoid: 3.3.8
       prop-types: 15.8.1
       react: 18.3.1
 
@@ -53232,7 +53216,7 @@ snapshots:
       lodash: 4.17.21
       lodash-es: 4.17.21
       markdown-to-jsx: 7.4.1(react@18.3.1)
-      nanoid: 3.3.7
+      nanoid: 3.3.8
       prop-types: 15.8.1
       react: 18.3.1
 
@@ -75069,7 +75053,7 @@ snapshots:
       log-symbols: 4.0.0
       minimatch: 3.1.2
       ms: 2.1.3
-      nanoid: 3.3.7
+      nanoid: 3.1.20
       serialize-javascript: 5.0.1
       strip-json-comments: 3.1.1
       supports-color: 8.1.1
@@ -75350,13 +75334,13 @@ snapshots:
 
   nanoid@2.1.11: {}
 
+  nanoid@3.1.20: {}
+
   nanoid@3.3.3: {}
 
-  nanoid@3.3.6: {}
-
-  nanoid@3.3.7: {}
-
   nanoid@3.3.8: {}
+
+  nanoid@5.1.2: {}
 
   nanomatch@1.2.13:
     dependencies:
@@ -78085,13 +78069,13 @@ snapshots:
 
   postcss@8.4.31:
     dependencies:
-      nanoid: 3.3.7
+      nanoid: 3.3.8
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
   postcss@8.4.38:
     dependencies:
-      nanoid: 3.3.7
+      nanoid: 3.3.8
       picocolors: 1.1.1
       source-map-js: 1.2.0
 
@@ -78109,7 +78093,7 @@ snapshots:
 
   postcss@8.4.47:
     dependencies:
-      nanoid: 3.3.7
+      nanoid: 3.3.8
       picocolors: 1.1.1
       source-map-js: 1.2.1
 

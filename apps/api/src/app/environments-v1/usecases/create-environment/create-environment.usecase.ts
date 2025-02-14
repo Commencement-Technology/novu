@@ -1,8 +1,7 @@
 import { BadRequestException, Injectable, UnprocessableEntityException } from '@nestjs/common';
 import { createHash } from 'crypto';
-import { nanoid } from 'nanoid';
 
-import { encryptApiKey } from '@novu/application-generic';
+import { encryptApiKey, shortId } from '@novu/application-generic';
 import { EnvironmentEntity, EnvironmentRepository, NotificationGroupRepository } from '@novu/dal';
 
 import { EnvironmentEnum, PROTECTED_ENVIRONMENTS } from '@novu/shared';
@@ -61,7 +60,7 @@ export class CreateEnvironment {
     const environment = await this.environmentRepository.create({
       _organizationId: command.organizationId,
       name: normalizedName,
-      identifier: nanoid(12),
+      identifier: shortId(),
       _parentId: command.parentEnvironmentId,
       color,
       apiKeys: [

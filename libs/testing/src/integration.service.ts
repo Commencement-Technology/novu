@@ -1,4 +1,4 @@
-import shortid from 'shortid';
+import { nanoid } from 'nanoid';
 import { EnvironmentRepository, IntegrationRepository } from '@novu/dal';
 import {
   ChannelTypeEnum,
@@ -62,7 +62,7 @@ export class IntegrationService {
       channel,
       credentials: {},
       active,
-      identifier: `${slugify(name)}-${shortid.generate()}`,
+      identifier: `${slugify(name)}-${nanoid()}`,
     };
 
     return await this.integrationRepository.create(payload);

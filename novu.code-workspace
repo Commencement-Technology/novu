@@ -13,10 +13,6 @@
       "path": "apps/worker",
     },
     {
-      "name": "🚀 @novu/web",
-      "path": "apps/web",
-    },
-    {
       "name": "🚀 @novu/dashboard",
       "path": "apps/dashboard",
     },

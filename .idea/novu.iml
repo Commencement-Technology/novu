@@ -15,7 +15,6 @@
       <excludeFolder url="file://$MODULE_DIR$/libs/embed/dist" />
       <excludeFolder url="file://$MODULE_DIR$/libs/testing/dist" />
       <excludeFolder url="file://$MODULE_DIR$/packages/node/build" />
-      <excludeFolder url="file://$MODULE_DIR$/apps/web/storybook-static" />
       <excludeFolder url="file://$MODULE_DIR$/providers/emailjs/build" />
       <excludeFolder url="file://$MODULE_DIR$/packages/novu/dist" />
       <excludeFolder url="file://$MODULE_DIR$/packages/stateless/build" />

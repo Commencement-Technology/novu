@@ -150,9 +150,6 @@
     "vite-plugin-ejs": "^1.7.0",
     "vite-plugin-static-copy": "^1.0.6"
   },
-  "peerDependencies": {
-    "@novu/web": "workspace:*"
-  },
   "nx": {
     "tags": [
       "type:app"

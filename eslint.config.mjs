@@ -2,7 +2,6 @@
 import tsEslint from 'typescript-eslint';
 import jsEslint from '@eslint/js';
 import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
-import panda from '@pandacss/eslint-plugin';
 import pluginCypress from 'eslint-plugin-cypress/flat';
 import localRules from 'eslint-plugin-local-rules';
 
@@ -346,7 +345,6 @@ export default tsEslint.config(
     ],
     extends: [pluginCypress.configs.recommended],
     plugins: {
-      '@pandacss': panda,
       'react-hooks': fixupPluginRules(reactHooks),
     },
     rules: {
@@ -381,8 +379,6 @@ export default tsEslint.config(
           format: ['PascalCase', 'camelCase', 'UPPER_CASE'],
         },
       ],
-
-      '@pandacss/no-config-function-in-source': 'off',
     },
   },
 

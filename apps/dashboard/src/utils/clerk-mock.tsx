@@ -1,12 +1,13 @@
 import React, { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { get } from '../api/api.client';
 import { Input } from '../components/primitives/input';
-import { useNavigate } from 'react-router-dom';
 import { createContextHook } from './context';
 
 export const AuthContext = React.createContext({});
 export const useAuth = createContextHook(AuthContext);
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function AuthContextProvider({ children }: any) {
   const value = {
     currentUser: {
@@ -17,7 +18,6 @@ export function AuthContextProvider({ children }: any) {
       publicMetadata: { newDashboardOptInStatus: true },
       unsafeMetadata: { newDashboardOptInStatus: 'opted_in' },
       lastName: 'saps',
-
       organizationMemberships: [{}],
       passwordEnabled: true,
       emailAddresses: [{ emailAddress: 'dd@novu.co' }],
@@ -30,6 +30,7 @@ export function AuthContextProvider({ children }: any) {
 export const OrganizationContext = React.createContext({});
 export const useOrganization = createContextHook(OrganizationContext);
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function OrganizationContextProvider({ children }: any) {
   const value = {
     organization: {
@@ -51,6 +52,7 @@ export function OrganizationContextProvider({ children }: any) {
 export const UserContext = React.createContext({});
 export const useUser = createContextHook(UserContext);
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function UserContextProvider({ children }: any) {
   const value = {
     user: {
@@ -115,6 +117,7 @@ export function SignIn() {
   });
 
   function getJwt() {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     get('/auth/self-hosted').then((result: any) => {
       localStorage.setItem('self-hosted-jwt', result?.data.token);
 
@@ -134,16 +137,19 @@ export function SignUp() {
   );
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function SignedIn({ children }: { children: any }) {
   return <>{children}</>;
 }
 
-export function SignedOut({ children }) {
-  if (window.Clerk.loggedIn) return null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function SignedOut({ children }: { children: any }) {
+  if ((window as any).Clerk.loggedIn) return null;
 
   return <>{children}</>;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 (window as any).Clerk = {
   loggedIn: !!localStorage.getItem('self-hosted-jwt'),
   session: {

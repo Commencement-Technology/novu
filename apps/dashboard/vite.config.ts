@@ -38,6 +38,9 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      ...(process.env.VITE_SELF_HOSTED
+        ? { '@clerk/clerk-react': path.resolve(__dirname, './src/utils/clerk-mock.tsx') }
+        : {}),
     },
   },
   server: {

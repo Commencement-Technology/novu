@@ -27,6 +27,7 @@ import { FreeTrialCard } from './free-trial-card';
 import { GettingStartedMenuItem } from './getting-started-menu-item';
 import { NavigationLink } from './navigation-link';
 import { OrganizationDropdown } from './organization-dropdown';
+import { IS_SELF_HOSTED } from '../../config';
 
 const NavigationGroup = ({ children, label }: { children: ReactNode; label?: string }) => {
   return (
@@ -119,34 +120,37 @@ export const SideNavigation = () => {
                 <span>Integration Store</span>
               </NavigationLink>
             </NavigationGroup>
-            <NavigationGroup label="Application">
-              <NavigationLink to={ROUTES.SETTINGS}>
-                <RiSettings4Line className="size-4" />
-                <span>Settings</span>
-              </NavigationLink>
-            </NavigationGroup>
-          </div>
-
-          <div className="relative mt-auto gap-8 pt-4">
-            {!isFreeTrialActive && !isLoadingSubscription && <ChangelogStack />}{' '}
-            {isFreeTrialActive && !isLoadingSubscription && (
-              <FreeTrialCard subscription={subscription} daysLeft={daysLeft} />
-            )}
-            <NavigationGroup>
-              <button onClick={showPlainLiveChat} className="w-full">
-                <NavigationLink>
-                  <RiChat1Line className="size-4" />
-                  <span>Share Feedback</span>
+            {!IS_SELF_HOSTED ? (
+              <NavigationGroup label="Application">
+                <NavigationLink to={ROUTES.SETTINGS}>
+                  <RiSettings4Line className="size-4" />
+                  <span>Settings</span>
                 </NavigationLink>
-              </button>
-              <NavigationLink to={ROUTES.SETTINGS_TEAM}>
-                <RiUserAddLine className="size-4" />
-                <span>Invite teammates</span>
-              </NavigationLink>
-
-              <GettingStartedMenuItem />
-            </NavigationGroup>
+              </NavigationGroup>
+            ) : null}
           </div>
+          {!IS_SELF_HOSTED && (
+            <div className="relative mt-auto gap-8 pt-4">
+              {!isFreeTrialActive && !isLoadingSubscription && !IS_SELF_HOSTED && <ChangelogStack />}{' '}
+              {isFreeTrialActive && !isLoadingSubscription && (
+                <FreeTrialCard subscription={subscription} daysLeft={daysLeft} />
+              )}
+              <NavigationGroup>
+                <button onClick={showPlainLiveChat} className="w-full">
+                  <NavigationLink>
+                    <RiChat1Line className="size-4" />
+                    <span>Share Feedback</span>
+                  </NavigationLink>
+                </button>
+                <NavigationLink to={ROUTES.SETTINGS_TEAM}>
+                  <RiUserAddLine className="size-4" />
+                  <span>Invite teammates</span>
+                </NavigationLink>
+
+                <GettingStartedMenuItem />
+              </NavigationGroup>
+            </div>
+          )}
         </nav>
       </SidebarContent>
     </aside>

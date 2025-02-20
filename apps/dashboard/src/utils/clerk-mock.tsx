@@ -1,0 +1,152 @@
+import React, { useEffect } from 'react';
+import { get } from '../api/api.client';
+import { Input } from '../components/primitives/input';
+import { useNavigate } from 'react-router-dom';
+import { createContextHook } from './context';
+
+export const AuthContext = React.createContext({});
+export const useAuth = createContextHook(AuthContext);
+
+export function AuthContextProvider({ children }: any) {
+  const value = {
+    currentUser: {
+      update: async () => null,
+      externalId: 1,
+      createdAt: new Date(),
+      firstName: 'Sap',
+      publicMetadata: { newDashboardOptInStatus: true },
+      unsafeMetadata: { newDashboardOptInStatus: 'opted_in' },
+      lastName: 'saps',
+
+      organizationMemberships: [{}],
+      passwordEnabled: true,
+      emailAddresses: [{ emailAddress: 'dd@novu.co' }],
+    },
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export const OrganizationContext = React.createContext({});
+export const useOrganization = createContextHook(OrganizationContext);
+
+export function OrganizationContextProvider({ children }: any) {
+  const value = {
+    organization: {
+      name: 'aaa',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      externalOrgId: '1',
+      publicMetadata: {
+        externalOrgId: '123',
+      },
+      _id: '123124',
+    },
+    isLoaded: true,
+  };
+
+  return <OrganizationContext.Provider value={value}>{children}</OrganizationContext.Provider>;
+}
+
+export const UserContext = React.createContext({});
+export const useUser = createContextHook(UserContext);
+
+export function UserContextProvider({ children }: any) {
+  const value = {
+    user: {
+      update: async () => null,
+      externalId: 1,
+      createdAt: new Date(),
+      firstName: 'Sap',
+      publicMetadata: { newDashboardOptInStatus: true },
+      unsafeMetadata: { newDashboardOptInStatus: true },
+      lastName: 'saps',
+
+      organizationMemberships: [{}],
+      passwordEnabled: true,
+      emailAddresses: [{ emailAddress: 'dd@novu.co' }],
+    },
+    isLoaded: true,
+  };
+
+  return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
+}
+
+export const ClerkContext = React.createContext({});
+
+export function ClerkProvider({ children }: any) {
+  const value = {};
+
+  return (
+    <ClerkContext.Provider value={value}>
+      <UserContextProvider>
+        <AuthContextProvider>
+          <OrganizationContextProvider>{children}</OrganizationContextProvider>
+        </AuthContextProvider>
+      </UserContextProvider>
+    </ClerkContext.Provider>
+  );
+}
+
+export function OrganizationSwitcher() {
+  return <></>;
+}
+
+export function UserButton() {
+  return <></>;
+}
+
+export function OrganizationList() {
+  return <></>;
+}
+
+export function OrganizationProfile() {
+  return <></>;
+}
+
+export function UserProfile() {
+  return <></>;
+}
+
+export function SignIn() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    getJwt();
+  });
+
+  function getJwt() {
+    get('/auth/self-hosted').then((result: any) => {
+      localStorage.setItem('self-hosted-jwt', result?.data.token);
+
+      navigate('/');
+    });
+  }
+
+  return <>{'Loading...'}</>;
+}
+
+export function SignUp() {
+  return (
+    <>
+      <Input placeholder="Email" />
+      <Input placeholder="Password" />
+    </>
+  );
+}
+
+export function SignedIn({ children }: { children: any }) {
+  return <>{children}</>;
+}
+
+export function SignedOut({ children }) {
+  if (window.Clerk.loggedIn) return null;
+
+  return <>{children}</>;
+}
+
+(window as any).Clerk = {
+  loggedIn: !!localStorage.getItem('self-hosted-jwt'),
+  session: {
+    getToken: () => localStorage.getItem('self-hosted-jwt'),
+  },
+};

@@ -33,3 +33,5 @@ export const NEW_DASHBOARD_FEEDBACK_FORM_URL = import.meta.env.VITE_NEW_DASHBOAR
 export const PLAIN_SUPPORT_CHAT_APP_ID = import.meta.env.VITE_PLAIN_SUPPORT_CHAT_APP_ID;
 
 export const ONBOARDING_DEMO_WORKFLOW_ID = 'onboarding-demo-workflow';
+
+export const IS_SELF_HOSTED = import.meta.env.VITE_SELF_HOSTED;

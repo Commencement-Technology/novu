@@ -1,10 +1,10 @@
-import { ReactNode, useCallback, useEffect, useMemo } from 'react';
+import { ROUTES } from '@/utils/routes';
 import { useAuth, useOrganization, useUser } from '@clerk/clerk-react';
 import type { UserResource } from '@clerk/types';
-import { ROUTES } from '@/utils/routes';
-import type { AuthContextValue } from './types';
-import { toOrganizationEntity, toUserEntity } from './mappers';
+import { ReactNode, useCallback, useEffect, useMemo } from 'react';
 import { AuthContext } from './auth-context';
+import { toOrganizationEntity, toUserEntity } from './mappers';
+import type { AuthContextValue } from './types';
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { orgId } = useAuth();

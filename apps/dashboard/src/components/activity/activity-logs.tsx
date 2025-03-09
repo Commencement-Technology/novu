@@ -1,7 +1,7 @@
 import { motion } from 'motion/react';
-import { RiPlayCircleLine, RiFileCopyLine, RiFullscreenLine, RiCloseLine } from 'react-icons/ri';
+import { RiPlayCircleLine, RiFullscreenLine, RiCloseLine } from 'react-icons/ri';
 import { IActivity } from '@novu/shared';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 
 import { cn } from '@/utils/ui';
 import { InlineToast } from '@/components/primitives/inline-toast';
@@ -12,24 +12,6 @@ import { CodeBlock } from '@/components/primitives/code-block';
 import { Dialog, DialogContent, DialogTitle, DialogClose, DialogHeader } from '@/components/primitives/dialog';
 import { CopyToClipboard } from '../primitives/copy-to-clipboard';
 import { Button } from '@/components/primitives/button';
-
-// Header component for both Popover and Dialog
-function PayloadHeader({ onResend, isDialog = false }: { onResend?: () => void; isDialog?: boolean }) {
-  return (
-    <div className="flex items-center justify-between border-b border-neutral-100 p-3">
-      {isDialog ? (
-        <DialogTitle className="text-foreground-950 text-sm font-medium">Request payload</DialogTitle>
-      ) : (
-        <h3 className="text-foreground-950 text-sm font-medium">Request payload</h3>
-      )}
-      {onResend && (
-        <Button variant="secondary" mode="ghost" size="sm" onClick={onResend} className="text-xs">
-          Resend
-        </Button>
-      )}
-    </div>
-  );
-}
 
 export function ActivityLogs({
   activity,
@@ -44,13 +26,28 @@ export function ActivityLogs({
 }): JSX.Element {
   const isMerged = activity.jobs.some((job) => job.status === 'merged');
   const { jobs, payload } = activity;
-  const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
+  const [isFullscreenOpen, setIsFullscreenOpenState] = useState(false);
+  const popoverCloseRef = useRef<HTMLButtonElement>(null);
 
   const formattedPayload = payload ? JSON.stringify(payload, null, 2) : '{}';
 
   const handleResend = () => {
     // Implement resend functionality here
     console.log('Resending payload:', payload);
+  };
+
+  const setIsFullscreenOpen = (isOpen: boolean) => {
+    if (isOpen && popoverCloseRef.current) {
+      popoverCloseRef.current.click();
+    }
+
+    setIsFullscreenOpenState(isOpen);
+  };
+
+  const closePopover = () => {
+    if (popoverCloseRef.current) {
+      popoverCloseRef.current.click();
+    }
   };
 
   return (
@@ -72,7 +69,17 @@ export function ActivityLogs({
               </button>
             </PopoverTrigger>
             <PopoverContent className="w-[400px] p-0" align="center" side="left">
-              <PayloadHeader onResend={handleResend} isDialog={false} />
+              <div className="flex items-center justify-between border-b border-neutral-100 p-3">
+                <h3 className="text-foreground-950 text-sm font-medium">Request payload</h3>
+                <div className="flex items-center gap-2">
+                  <Button variant="secondary" mode="ghost" size="sm" onClick={handleResend} className="text-xs">
+                    Resend
+                  </Button>
+                  <Button variant="secondary" mode="ghost" size="sm" className="text-xs" onClick={closePopover}>
+                    <RiCloseLine className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
               <div className="max-h-[400px] overflow-auto p-3">
                 <CodeBlock
                   code={formattedPayload}
@@ -84,6 +91,7 @@ export function ActivityLogs({
                   }
                 />
               </div>
+              <PopoverClose ref={popoverCloseRef} className="hidden" />
             </PopoverContent>
           </Popover>
         )}
@@ -154,11 +162,15 @@ function ActionButtons({
   formattedPayload: string;
   setIsFullscreenOpen: (isOpen: boolean) => void;
 }) {
+  const handleFullscreenClick = () => {
+    setIsFullscreenOpen(true);
+  };
+
   return (
     <div className="flex items-center gap-1">
       <CopyToClipboard content={formattedPayload} theme="light" title="Copy code" />
       <button
-        onClick={() => setIsFullscreenOpen(true)}
+        onClick={handleFullscreenClick}
         className="text-text-sub hover:bg-bg-weak inline-flex select-none items-center justify-center whitespace-nowrap p-2.5 outline-none transition duration-200 ease-out"
       >
         <RiFullscreenLine className="size-3" />

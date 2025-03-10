@@ -1,6 +1,6 @@
 import { motion } from 'motion/react';
 import { RiPlayCircleLine, RiFullscreenLine, RiCloseLine } from 'react-icons/ri';
-import { IActivity } from '@novu/shared';
+import { IActivity, IEnvironment } from '@novu/shared';
 import { useState, useRef } from 'react';
 
 import { cn } from '@/utils/ui';
@@ -12,16 +12,24 @@ import { CodeBlock } from '@/components/primitives/code-block';
 import { Dialog, DialogContent, DialogTitle, DialogClose, DialogHeader } from '@/components/primitives/dialog';
 import { CopyToClipboard } from '../primitives/copy-to-clipboard';
 import { Button } from '@/components/primitives/button';
+import { ActivityFiltersData } from '../../types/activity';
+import { ToastClose } from '../primitives/sonner';
+import { showToast } from '../primitives/sonner-helpers';
+import { toast } from 'sonner';
+import { triggerWorkflow } from '../../api/workflows';
+import { ToastIcon } from '../primitives/sonner';
 
 export function ActivityLogs({
   activity,
   className,
   onActivitySelect,
+  handleFiltersChange,
   children,
 }: {
   activity: IActivity;
   className?: string;
   onActivitySelect: (activityId: string) => void;
+  handleFiltersChange: (data: ActivityFiltersData) => void;
   children?: React.ReactNode;
 }): JSX.Element {
   const isMerged = activity.jobs.some((job) => job.status === 'merged');
@@ -31,9 +39,48 @@ export function ActivityLogs({
 
   const formattedPayload = payload ? JSON.stringify(payload, null, 2) : '{}';
 
-  const handleResend = () => {
+  const handleResend = async () => {
     // Implement resend functionality here
     console.log('Resending payload:', payload);
+
+    try {
+      const {
+        data: { transactionId: newTransactionId },
+      } = await triggerWorkflow({
+        name: activity.template?.name ?? '',
+        to: activity.subscriber?.subscriberId,
+        payload: payload ?? {},
+        environment: { _id: activity._environmentId } as IEnvironment,
+      });
+
+      if (!newTransactionId) {
+        return showToast({
+          variant: 'lg',
+          children: ({ close }) => (
+            <>
+              <ToastIcon variant="error" />
+              <div className="flex flex-col gap-2">
+                <span className="font-medium">Test workflow failed</span>
+                <span className="text-foreground-600 inline">
+                  Workflow <span className="font-bold">{activity.template?.name}</span> cannot be triggered. Ensure that
+                  it is active and requires not further actions.
+                </span>
+              </div>
+              <ToastClose onClick={close} />
+            </>
+          ),
+          options: {
+            position: 'bottom-right',
+          },
+        });
+      }
+
+      handleFiltersChange({ transactionId: newTransactionId } as ActivityFiltersData);
+    } catch (e) {
+      toast.error('Failed to trigger workflow', {
+        description: e instanceof Error ? e.message : 'There was an error triggering the workflow.',
+      });
+    }
   };
 
   const setIsFullscreenOpen = (isOpen: boolean) => {

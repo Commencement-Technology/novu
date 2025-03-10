@@ -97,7 +97,11 @@ export function ActivityFeed() {
                           <>
                             <ActivityHeader title={activity.template?.name} />
                             <ActivityOverview activity={activity} />
-                            <ActivityLogs activity={activity} onActivitySelect={handleActivitySelect} />
+                            <ActivityLogs
+                              activity={activity}
+                              onActivitySelect={handleActivitySelect}
+                              handleFiltersChange={handleFiltersChange}
+                            />
                           </>
                         )}
                       </ActivityPanel>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useFormContext, useWatch } from 'react-hook-form';
 import { RiCheckboxCircleFill } from 'react-icons/ri';
 import { WorkflowResponseDto } from '@novu/shared';
@@ -21,14 +21,17 @@ type TestWorkflowLogsSidebarProps = {
   workflow?: WorkflowResponseDto;
 };
 
-export const TestWorkflowLogsSidebar = ({ transactionId, workflow }: TestWorkflowLogsSidebarProps) => {
+export const TestWorkflowLogsSidebar = (props: TestWorkflowLogsSidebarProps) => {
   const { control } = useFormContext<TestWorkflowFormType>();
   const [parentActivityId, setParentActivityId] = useState<string | undefined>(undefined);
   const [shouldRefetch, setShouldRefetch] = useState(true);
   const [showInstructions, setShowInstructions] = useState(false);
+  const [isTransactionChanging, setIsTransactionChanging] = useState(false);
   const to = useWatch({ name: 'to', control });
   const payload = useWatch({ name: 'payload', control });
+  const [transactionId, setTransactionId] = useState<string | undefined>(props.transactionId);
 
+  console.log('transactionId', transactionId, props.transactionId);
   const {
     activities,
     isPending: areActivitiesPending,
@@ -55,22 +58,51 @@ export const TestWorkflowLogsSidebar = ({ transactionId, workflow }: TestWorkflo
     }
   }, [activityId]);
 
+  // Handle transaction ID changes with proper refetch logic
+  const handleTransactionIdChange = useCallback((newTransactionId: string) => {
+    setIsTransactionChanging(true);
+    setTransactionId(newTransactionId);
+    setShouldRefetch(true);
+    setParentActivityId(undefined);
+
+    // Set a timeout to hide the loading state after a reasonable time
+    setTimeout(() => {
+      setIsTransactionChanging(false);
+    }, 5000); // 5 seconds max loading time
+  }, []);
+
+  // Handle resend start event
+  const handleResendStart = useCallback(() => {
+    setShouldRefetch(true);
+    setIsTransactionChanging(true);
+  }, []);
+
+  // Reset loading state when activity changes
+  useEffect(() => {
+    if (activity) {
+      setIsTransactionChanging(false);
+    }
+  }, [activity]);
+
   // Reset refetch when transaction ID changes
   useEffect(() => {
-    if (!transactionId) {
+    if (!props.transactionId && !transactionId) {
       return;
     }
 
+    console.log('setting transactionId', props.transactionId);
+
+    setTransactionId(props.transactionId);
     setShouldRefetch(true);
     setParentActivityId(undefined);
-  }, [transactionId]);
+  }, [props.transactionId]);
 
   return (
     <aside className="flex h-full max-h-full flex-1 flex-col overflow-auto">
       {transactionId ? (
         <>
           <ActivityPanel>
-            {isPending ? (
+            {isPending || isTransactionChanging ? (
               <ActivitySkeleton />
             ) : error || !activity ? (
               <ActivityError />
@@ -78,10 +110,15 @@ export const TestWorkflowLogsSidebar = ({ transactionId, workflow }: TestWorkflo
               <React.Fragment key={activityId}>
                 <ActivityHeader title={activity.template?.name} className="h-[49px] border-t-0" />
                 <ActivityOverview activity={activity} />
-                <ActivityLogs activity={activity} onActivitySelect={setParentActivityId} />
+                <ActivityLogs
+                  activity={activity}
+                  onActivitySelect={setParentActivityId}
+                  onTransactionIdChange={handleTransactionIdChange}
+                  onResendStart={handleResendStart}
+                />
               </React.Fragment>
             )}
-            {!workflow?.lastTriggeredAt && (
+            {!props.workflow?.lastTriggeredAt && (
               <div className="border-t border-neutral-100 p-3">
                 <div className="border-stroke-soft bg-bg-weak rounded-8 flex items-center justify-between gap-3 border p-3 py-2">
                   <div className="flex items-center gap-3">
@@ -117,7 +154,7 @@ export const TestWorkflowLogsSidebar = ({ transactionId, workflow }: TestWorkflo
       <TestWorkflowInstructions
         isOpen={showInstructions}
         onClose={() => setShowInstructions(false)}
-        workflow={workflow}
+        workflow={props.workflow}
         to={to}
         payload={payload}
       />

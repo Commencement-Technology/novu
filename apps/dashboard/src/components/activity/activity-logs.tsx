@@ -1,7 +1,8 @@
 import { motion } from 'motion/react';
-import { RiPlayCircleLine, RiFullscreenLine, RiCloseLine } from 'react-icons/ri';
+import { RiPlayCircleLine, RiFullscreenLine, RiCloseLine, RiCodeBlock } from 'react-icons/ri';
 import { IActivity, IEnvironment } from '@novu/shared';
 import { useState, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { cn } from '@/utils/ui';
 import { InlineToast } from '@/components/primitives/inline-toast';
@@ -12,48 +13,62 @@ import { CodeBlock } from '@/components/primitives/code-block';
 import { Dialog, DialogContent, DialogTitle, DialogClose, DialogHeader } from '@/components/primitives/dialog';
 import { CopyToClipboard } from '../primitives/copy-to-clipboard';
 import { Button } from '@/components/primitives/button';
-import { ActivityFiltersData } from '../../types/activity';
 import { ToastClose } from '../primitives/sonner';
 import { showToast } from '../primitives/sonner-helpers';
 import { toast } from 'sonner';
 import { triggerWorkflow } from '../../api/workflows';
 import { ToastIcon } from '../primitives/sonner';
+import { QueryKeys } from '@/utils/query-keys';
+import { getActivityList } from '@/api/activity';
+import { useEnvironment } from '@/context/environment/hooks';
+import { RepeatPlay } from '../icons/repeat-play';
 
 export function ActivityLogs({
   activity,
   className,
   onActivitySelect,
-  handleFiltersChange,
+  onTransactionIdChange,
+  onResendStart,
   children,
 }: {
   activity: IActivity;
   className?: string;
   onActivitySelect: (activityId: string) => void;
-  handleFiltersChange: (data: ActivityFiltersData) => void;
+  onTransactionIdChange?: (transactionId: string, activityId?: string) => void;
+  onResendStart?: () => void;
   children?: React.ReactNode;
 }): JSX.Element {
   const isMerged = activity.jobs.some((job) => job.status === 'merged');
   const { jobs, payload } = activity;
   const [isFullscreenOpen, setIsFullscreenOpenState] = useState(false);
   const popoverCloseRef = useRef<HTMLButtonElement>(null);
+  const queryClient = useQueryClient();
+  const [isResending, setIsResending] = useState(false);
+  const { currentEnvironment } = useEnvironment();
 
+  const resentMetadata = {
+    __resent_transaction_id: activity.transactionId,
+    __resent_at: new Date().toISOString(),
+  };
+  const resentPayload = payload ? { ...payload, ...resentMetadata } : resentMetadata;
   const formattedPayload = payload ? JSON.stringify(payload, null, 2) : '{}';
 
   const handleResend = async () => {
-    // Implement resend functionality here
-    console.log('Resending payload:', payload);
-
     try {
+      setIsResending(true);
+      onResendStart?.();
+
       const {
         data: { transactionId: newTransactionId },
       } = await triggerWorkflow({
-        name: activity.template?.name ?? '',
+        name: activity.template?.triggers[0].identifier ?? '',
         to: activity.subscriber?.subscriberId,
-        payload: payload ?? {},
+        payload: resentPayload,
         environment: { _id: activity._environmentId } as IEnvironment,
       });
 
       if (!newTransactionId) {
+        setIsResending(false);
         return showToast({
           variant: 'lg',
           children: ({ close }) => (
@@ -75,10 +90,45 @@ export function ActivityLogs({
         });
       }
 
-      handleFiltersChange({ transactionId: newTransactionId } as ActivityFiltersData);
+      closePopover();
+      setIsFullscreenOpen(false);
+
+      toast.success('Notification resent successfully', {
+        description: `A new notification has been triggered with transaction ID: ${newTransactionId}`,
+      });
+
+      const checkAndUpdateTransaction = async () => {
+        if (currentEnvironment) {
+          const { data: activities } = await getActivityList({
+            environment: currentEnvironment,
+            page: 0,
+            limit: 1,
+            filters: {
+              transactionId: newTransactionId,
+            },
+          });
+
+          if (activities.length > 0) {
+            setIsResending(false);
+
+            if (onTransactionIdChange) {
+              queryClient.invalidateQueries({
+                queryKey: [QueryKeys.fetchActivities, activity._environmentId],
+              });
+
+              onTransactionIdChange(newTransactionId, activities[0]._id);
+            }
+
+            return;
+          }
+        }
+      };
+
+      setTimeout(checkAndUpdateTransaction, 1000);
     } catch (e) {
-      toast.error('Failed to trigger workflow', {
-        description: e instanceof Error ? e.message : 'There was an error triggering the workflow.',
+      setIsResending(false);
+      toast.error('Failed to trigger resend workflow', {
+        description: e instanceof Error ? e.message : 'There was an error triggering the resend workflow.',
       });
     }
   };
@@ -111,15 +161,26 @@ export function ActivityLogs({
         {payload && (
           <Popover>
             <PopoverTrigger asChild>
-              <button className="text-foreground-600 hover:text-foreground-950 text-xs transition-colors">
-                View request payload
-              </button>
+              <div className="flex items-center gap-1">
+                <RiCodeBlock className="size-3" />
+                <button className="text-foreground-600 hover:text-foreground-950 text-xs underline transition-colors">
+                  View request payload
+                </button>
+              </div>
             </PopoverTrigger>
             <PopoverContent className="w-[400px] p-0" align="center" side="left">
               <div className="flex items-center justify-between border-b border-neutral-100 p-3">
                 <h3 className="text-foreground-950 text-sm font-medium">Request payload</h3>
                 <div className="flex items-center gap-2">
-                  <Button variant="secondary" mode="ghost" size="sm" onClick={handleResend} className="text-xs">
+                  <Button
+                    variant="secondary"
+                    mode="ghost"
+                    size="sm"
+                    onClick={handleResend}
+                    className="text-xs"
+                    disabled={isResending}
+                  >
+                    <RepeatPlay className={cn('size-3', isResending && 'text-text-disabled opacity-50')} />
                     Resend
                   </Button>
                   <Button variant="secondary" mode="ghost" size="sm" className="text-xs" onClick={closePopover}>
@@ -176,7 +237,15 @@ export function ActivityLogs({
             <div className="flex items-center justify-between">
               <DialogTitle className="text-foreground-950 text-sm font-medium">Request payload</DialogTitle>
               <div className="flex items-center gap-2">
-                <Button variant="secondary" mode="ghost" size="sm" onClick={handleResend} className="text-xs">
+                <Button
+                  variant="secondary"
+                  mode="ghost"
+                  size="sm"
+                  onClick={handleResend}
+                  className="text-xs"
+                  disabled={isResending}
+                >
+                  <RepeatPlay className={cn('size-3', isResending && 'text-text-disabled opacity-50')} />
                   Resend
                 </Button>
                 <DialogClose asChild>

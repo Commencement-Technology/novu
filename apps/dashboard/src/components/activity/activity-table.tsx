@@ -22,6 +22,7 @@ export interface ActivityTableProps {
   filters?: ActivityFilters;
   hasActiveFilters: boolean;
   onClearFilters: () => void;
+  isLoading?: boolean;
 }
 
 export function ActivityTable({
@@ -30,12 +31,18 @@ export function ActivityTable({
   filters,
   hasActiveFilters,
   onClearFilters,
+  isLoading: externalLoading = false,
 }: ActivityTableProps) {
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
   const page = parsePageParam(searchParams.get('page'));
-  const { activities, isLoading, hasMore, error } = useFetchActivities(
+  const {
+    activities,
+    isLoading: fetchLoading,
+    hasMore,
+    error,
+  } = useFetchActivities(
     {
       filters,
       page,
@@ -44,6 +51,9 @@ export function ActivityTable({
       refetchOnWindowFocus: true,
     }
   );
+
+  // Combine external loading state with fetch loading state
+  const isLoading = fetchLoading || externalLoading;
 
   useEffect(() => {
     if (error) {

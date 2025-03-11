@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 
 import { ActivityFilters } from '@/components/activity/activity-filters';
@@ -18,8 +18,9 @@ import { ActivityError } from '@/components/activity/activity-error';
 
 export function ActivityFeed() {
   const { activityItemId, filters, filterValues, handleActivitySelect, handleFiltersChange } = useActivityUrlState();
-
   const { activity, isPending, error } = usePullActivity(activityItemId);
+  const [isTransactionLoading, setIsTransactionLoading] = useState(false);
+  const [isTableLoading, setIsTableLoading] = useState(false);
 
   const hasActiveFilters = Object.entries(filters).some(([key, value]) => {
     // Ignore dateRange as it's always present
@@ -46,6 +47,48 @@ export function ActivityFeed() {
     );
   }, [filterValues]);
 
+  // Function to handle transaction ID changes with retry logic
+  const handleTransactionIdChange = useCallback(
+    (newTransactionId: string, activityId?: string) => {
+      setIsTransactionLoading(true);
+
+      if (activityId) {
+        handleActivitySelect(activityId);
+      } else if (newTransactionId) {
+        // Update the URL with the new transaction ID
+        handleFiltersChange({
+          ...filterValues,
+          transactionId: newTransactionId,
+        });
+      } else {
+        // Update the URL with the new transaction ID
+        handleFiltersChange({
+          ...filterValues,
+        });
+      }
+
+      // Set a timeout to hide the loading state after a reasonable time
+      // even if we don't find the activity
+      setTimeout(() => {
+        setIsTransactionLoading(false);
+        setIsTableLoading(false); // Also reset table loading state
+      }, 5000); // 5 seconds max loading time
+    },
+    [filterValues, handleFiltersChange, handleActivitySelect]
+  );
+
+  // Handle resend start event
+  const handleResendStart = useCallback(() => {
+    // setIsTableLoading(true);
+  }, []);
+
+  // Reset loading state when activity changes
+  useEffect(() => {
+    if (activity) {
+      setIsTransactionLoading(false);
+    }
+  }, [activity]);
+
   return (
     <>
       <PageMeta title="Activity Feed" />
@@ -71,6 +114,7 @@ export function ActivityFeed() {
                 filters={filters}
                 hasActiveFilters={hasActiveFilters}
                 onClearFilters={handleClearFilters}
+                isLoading={isTableLoading}
               />
             </ResizablePanel>
 
@@ -89,7 +133,7 @@ export function ActivityFeed() {
                       className="bg-background h-full overflow-auto"
                     >
                       <ActivityPanel>
-                        {isPending ? (
+                        {isPending || isTransactionLoading ? (
                           <ActivitySkeleton />
                         ) : error || !activity ? (
                           <ActivityError />
@@ -100,7 +144,8 @@ export function ActivityFeed() {
                             <ActivityLogs
                               activity={activity}
                               onActivitySelect={handleActivitySelect}
-                              handleFiltersChange={handleFiltersChange}
+                              onTransactionIdChange={handleTransactionIdChange}
+                              onResendStart={handleResendStart}
                             />
                           </>
                         )}

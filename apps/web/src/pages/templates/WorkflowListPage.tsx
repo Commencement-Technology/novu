@@ -202,8 +202,7 @@ function WorkflowListPage() {
   const shouldShowEmptyState = !isLoading && !isFetching && !hasTemplates && searchValue === '';
   const shouldShowNoResults = !isLoading && !isFetching && !hasTemplates && searchValue !== '';
   const isSearchInputDisabled = isLoading || (!hasTemplates && searchValue === '');
-  // const isV2Enabled = useFeatureFlag(FeatureFlagsKeysEnum.IS_V2_ENABLED);
-  const isV2Enabled = false;
+  const isV2Enabled = useFeatureFlag(FeatureFlagsKeysEnum.IS_V2_ENABLED);
 
   const { TemplatesStoreModal, openModal } = useTemplatesStoreModal({ general, popular });
 

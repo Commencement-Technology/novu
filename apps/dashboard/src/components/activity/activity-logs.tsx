@@ -1,7 +1,7 @@
 import { motion } from 'motion/react';
 import { RiPlayCircleLine, RiFullscreenLine, RiCloseLine, RiCodeBlock } from 'react-icons/ri';
 import { IActivity, IEnvironment } from '@novu/shared';
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { cn } from '@/utils/ui';
@@ -45,6 +45,7 @@ export function ActivityLogs({
   const queryClient = useQueryClient();
   const [isResending, setIsResending] = useState(false);
   const { currentEnvironment } = useEnvironment();
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
   const resentMetadata = {
     __resent_transaction_id: activity.transactionId,
@@ -53,99 +54,121 @@ export function ActivityLogs({
   const resentPayload = payload ? { ...payload, ...resentMetadata } : resentMetadata;
   const formattedPayload = payload ? JSON.stringify(payload, null, 2) : '{}';
 
-  const handleResend = async () => {
-    try {
-      setIsResending(true);
-      onResendStart?.();
-
-      const {
-        data: { transactionId: newTransactionId },
-      } = await triggerWorkflow({
-        name: activity.template?.triggers[0].identifier ?? '',
-        to: activity.subscriber?.subscriberId,
-        payload: resentPayload,
-        environment: { _id: activity._environmentId } as IEnvironment,
-      });
-
-      if (!newTransactionId) {
-        setIsResending(false);
-        return showToast({
-          variant: 'lg',
-          children: ({ close }) => (
-            <>
-              <ToastIcon variant="error" />
-              <div className="flex flex-col gap-2">
-                <span className="font-medium">Test workflow failed</span>
-                <span className="text-foreground-600 inline">
-                  Workflow <span className="font-bold">{activity.template?.name}</span> cannot be triggered. Ensure that
-                  it is active and requires not further actions.
-                </span>
-              </div>
-              <ToastClose onClick={close} />
-            </>
-          ),
-          options: {
-            position: 'bottom-right',
-          },
-        });
-      }
-
-      closePopover();
-      setIsFullscreenOpen(false);
-
-      toast.success('Notification resent successfully', {
-        description: `A new notification has been triggered with transaction ID: ${newTransactionId}`,
-      });
-
-      const checkAndUpdateTransaction = async () => {
-        if (currentEnvironment) {
-          const { data: activities } = await getActivityList({
-            environment: currentEnvironment,
-            page: 0,
-            limit: 1,
-            filters: {
-              transactionId: newTransactionId,
-            },
-          });
-
-          if (activities.length > 0) {
-            setIsResending(false);
-
-            if (onTransactionIdChange) {
-              queryClient.invalidateQueries({
-                queryKey: [QueryKeys.fetchActivities, activity._environmentId],
-              });
-
-              onTransactionIdChange(newTransactionId, activities[0]._id);
-            }
-
-            return;
-          }
-        }
-      };
-
-      setTimeout(checkAndUpdateTransaction, 1000);
-    } catch (e) {
-      setIsResending(false);
-      toast.error('Failed to trigger resend workflow', {
-        description: e instanceof Error ? e.message : 'There was an error triggering the resend workflow.',
-      });
-    }
-  };
-
-  const setIsFullscreenOpen = (isOpen: boolean) => {
+  const setIsFullscreenOpen = useCallback((isOpen: boolean) => {
     if (isOpen && popoverCloseRef.current) {
       popoverCloseRef.current.click();
     }
 
     setIsFullscreenOpenState(isOpen);
-  };
+  }, []);
 
-  const closePopover = () => {
+  const closePopover = useCallback(() => {
     if (popoverCloseRef.current) {
       popoverCloseRef.current.click();
     }
-  };
+
+    setIsPopoverOpen(false);
+  }, []);
+
+  const handleResend = useCallback(
+    async (e?: React.MouseEvent) => {
+      try {
+        setIsResending(true);
+
+        onResendStart?.();
+
+        const {
+          data: { transactionId: newTransactionId },
+        } = await triggerWorkflow({
+          name: activity.template?.triggers[0].identifier ?? '',
+          to: activity.subscriber?.subscriberId,
+          payload: resentPayload,
+          environment: { _id: activity._environmentId } as IEnvironment,
+        });
+
+        setIsResending(false);
+
+        if (!newTransactionId) {
+          return showToast({
+            variant: 'lg',
+            children: ({ close }) => (
+              <>
+                <ToastIcon variant="error" />
+                <div className="flex flex-col gap-2">
+                  <span className="font-medium">Test workflow failed</span>
+                  <span className="text-foreground-600 inline">
+                    Workflow <span className="font-bold">{activity.template?.name}</span> cannot be triggered. Ensure
+                    that it is active and requires not further actions.
+                  </span>
+                </div>
+                <ToastClose onClick={close} />
+              </>
+            ),
+            options: {
+              position: 'bottom-right',
+            },
+          });
+        }
+
+        closePopover();
+        setIsFullscreenOpen(false);
+
+        toast.success('Notification resent successfully', {
+          description: `A new notification has been triggered with transaction ID: ${newTransactionId}`,
+        });
+
+        const checkAndUpdateTransaction = async () => {
+          if (currentEnvironment) {
+            const { data: activities } = await getActivityList({
+              environment: currentEnvironment,
+              page: 0,
+              limit: 1,
+              filters: {
+                transactionId: newTransactionId,
+              },
+            });
+
+            if (activities.length > 0) {
+              setIsResending(false);
+
+              queryClient.invalidateQueries({
+                queryKey: [QueryKeys.fetchActivities, activity._environmentId],
+              });
+              onTransactionIdChange?.(newTransactionId, activities[0]._id);
+              return;
+            }
+          }
+        };
+
+        setTimeout(checkAndUpdateTransaction, 1000);
+      } catch (e) {
+        setIsResending(false);
+        toast.error('Failed to trigger resend workflow', {
+          description: e instanceof Error ? e.message : 'There was an error triggering the resend workflow.',
+        });
+      }
+    },
+    [
+      activity,
+      currentEnvironment,
+      resentPayload,
+      queryClient,
+      onResendStart,
+      onTransactionIdChange,
+      setIsFullscreenOpen,
+      closePopover,
+    ]
+  );
+
+  const handlePopoverOpenChange = useCallback((open: boolean) => {
+    setIsPopoverOpen(open);
+  }, []);
+
+  const handleViewPayloadClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setIsPopoverOpen(true);
+  }, []);
 
   return (
     <>
@@ -159,11 +182,14 @@ export function ActivityLogs({
         </div>
 
         {payload && (
-          <Popover>
+          <Popover open={isPopoverOpen} onOpenChange={handlePopoverOpenChange}>
             <PopoverTrigger asChild>
               <div className="flex items-center gap-1">
                 <RiCodeBlock className="size-3" />
-                <button className="text-foreground-600 hover:text-foreground-950 text-xs underline transition-colors">
+                <button
+                  className="text-foreground-600 hover:text-foreground-950 text-xs underline transition-colors"
+                  onClick={handleViewPayloadClick}
+                >
                   View request payload
                 </button>
               </div>
@@ -176,14 +202,26 @@ export function ActivityLogs({
                     variant="secondary"
                     mode="ghost"
                     size="sm"
-                    onClick={handleResend}
+                    onClick={(e) => handleResend(e)}
                     className="text-xs"
                     disabled={isResending}
+                    type="button"
                   >
                     <RepeatPlay className={cn('size-3', isResending && 'text-text-disabled opacity-50')} />
                     Resend
                   </Button>
-                  <Button variant="secondary" mode="ghost" size="sm" className="text-xs" onClick={closePopover}>
+                  <Button
+                    variant="secondary"
+                    mode="ghost"
+                    size="sm"
+                    className="text-xs"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      closePopover();
+                    }}
+                    type="button"
+                  >
                     <RiCloseLine className="h-4 w-4" />
                   </Button>
                 </div>
@@ -230,7 +268,6 @@ export function ActivityLogs({
         {children}
       </motion.div>
 
-      {/* Fullscreen Dialog for Payload */}
       <Dialog open={isFullscreenOpen} onOpenChange={setIsFullscreenOpen}>
         <DialogContent className="flex h-[90%] max-h-[90vh] w-[90%] max-w-[90%] flex-col p-0 md:max-w-[80%] lg:max-w-[70%] [&>button.absolute.right-4.top-4]:hidden">
           <DialogHeader className="border-b border-neutral-100 p-3">
@@ -241,15 +278,16 @@ export function ActivityLogs({
                   variant="secondary"
                   mode="ghost"
                   size="sm"
-                  onClick={handleResend}
+                  onClick={(e) => handleResend(e)}
                   className="text-xs"
                   disabled={isResending}
+                  type="button"
                 >
                   <RepeatPlay className={cn('size-3', isResending && 'text-text-disabled opacity-50')} />
                   Resend
                 </Button>
                 <DialogClose asChild>
-                  <Button variant="secondary" mode="ghost" size="sm" className="text-xs">
+                  <Button variant="secondary" mode="ghost" size="sm" className="text-xs" type="button">
                     <RiCloseLine className="h-4 w-4" />
                   </Button>
                 </DialogClose>

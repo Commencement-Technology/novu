@@ -31,7 +31,6 @@ export const TestWorkflowLogsSidebar = (props: TestWorkflowLogsSidebarProps) => 
   const payload = useWatch({ name: 'payload', control });
   const [transactionId, setTransactionId] = useState<string | undefined>(props.transactionId);
 
-  console.log('transactionId', transactionId, props.transactionId);
   const {
     activities,
     isPending: areActivitiesPending,
@@ -58,44 +57,41 @@ export const TestWorkflowLogsSidebar = (props: TestWorkflowLogsSidebarProps) => 
     }
   }, [activityId]);
 
-  // Handle transaction ID changes with proper refetch logic
   const handleTransactionIdChange = useCallback((newTransactionId: string) => {
     setIsTransactionChanging(true);
     setTransactionId(newTransactionId);
-    setShouldRefetch(true);
     setParentActivityId(undefined);
 
-    // Set a timeout to hide the loading state after a reasonable time
     setTimeout(() => {
       setIsTransactionChanging(false);
-    }, 5000); // 5 seconds max loading time
+    }, 5000);
   }, []);
 
-  // Handle resend start event
   const handleResendStart = useCallback(() => {
-    setShouldRefetch(true);
     setIsTransactionChanging(true);
   }, []);
 
-  // Reset loading state when activity changes
   useEffect(() => {
     if (activity) {
       setIsTransactionChanging(false);
     }
   }, [activity]);
 
-  // Reset refetch when transaction ID changes
+  // responsible for initial update from TestWorkflowTabs by props
   useEffect(() => {
-    if (!props.transactionId && !transactionId) {
+    if (!transactionId && !props.transactionId) {
       return;
     }
 
-    console.log('setting transactionId', props.transactionId);
+    if (!transactionId && props.transactionId) {
+      setTransactionId(props.transactionId);
+    } else if (transactionId) {
+      return;
+    }
 
-    setTransactionId(props.transactionId);
     setShouldRefetch(true);
     setParentActivityId(undefined);
-  }, [props.transactionId]);
+  }, [transactionId, props.transactionId]);
 
   return (
     <aside className="flex h-full max-h-full flex-1 flex-col overflow-auto">

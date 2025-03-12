@@ -47,7 +47,6 @@ export function ActivityFeed() {
     );
   }, [filterValues]);
 
-  // Function to handle transaction ID changes with retry logic
   const handleTransactionIdChange = useCallback(
     (newTransactionId: string, activityId?: string) => {
       setIsTransactionLoading(true);
@@ -55,34 +54,28 @@ export function ActivityFeed() {
       if (activityId) {
         handleActivitySelect(activityId);
       } else if (newTransactionId) {
-        // Update the URL with the new transaction ID
         handleFiltersChange({
           ...filterValues,
           transactionId: newTransactionId,
         });
       } else {
-        // Update the URL with the new transaction ID
         handleFiltersChange({
           ...filterValues,
         });
       }
 
-      // Set a timeout to hide the loading state after a reasonable time
-      // even if we don't find the activity
       setTimeout(() => {
         setIsTransactionLoading(false);
-        setIsTableLoading(false); // Also reset table loading state
-      }, 5000); // 5 seconds max loading time
+        setIsTableLoading(false);
+      }, 5000);
     },
     [filterValues, handleFiltersChange, handleActivitySelect]
   );
 
-  // Handle resend start event
   const handleResendStart = useCallback(() => {
-    // setIsTableLoading(true);
+    setIsTableLoading(true);
   }, []);
 
-  // Reset loading state when activity changes
   useEffect(() => {
     if (activity) {
       setIsTransactionLoading(false);
@@ -146,6 +139,7 @@ export function ActivityFeed() {
                               onActivitySelect={handleActivitySelect}
                               onTransactionIdChange={handleTransactionIdChange}
                               onResendStart={handleResendStart}
+                              // onResendStart={handleResendStart}
                             />
                           </>
                         )}

@@ -168,7 +168,10 @@ export function ActivityLogs({
                 <RiCodeBlock className="size-3" />
                 <button
                   className="text-foreground-600 hover:text-foreground-950 text-xs underline transition-colors"
-                  onClick={() => setIsPopoverOpen(true)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setIsPopoverOpen(true);
+                  }}
                 >
                   View request payload
                 </button>

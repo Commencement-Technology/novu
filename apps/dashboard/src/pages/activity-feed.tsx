@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, useEffect } from 'react';
+import { useMemo, useCallback } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 
 import { ActivityFilters } from '@/components/activity/activity-filters';
@@ -19,7 +19,6 @@ import { ActivityError } from '@/components/activity/activity-error';
 export function ActivityFeed() {
   const { activityItemId, filters, filterValues, handleActivitySelect, handleFiltersChange } = useActivityUrlState();
   const { activity, isPending, error } = usePullActivity(activityItemId);
-  const [isTableLoading, setIsTableLoading] = useState(false);
 
   const hasActiveFilters = Object.entries(filters).some(([key, value]) => {
     // Ignore dateRange as it's always present
@@ -48,8 +47,6 @@ export function ActivityFeed() {
 
   const handleTransactionIdChange = useCallback(
     (newTransactionId: string, activityId?: string) => {
-      setIsTableLoading(true);
-
       if (activityId) {
         handleActivitySelect(activityId);
       } else {
@@ -61,12 +58,6 @@ export function ActivityFeed() {
     },
     [filterValues, handleFiltersChange, handleActivitySelect]
   );
-
-  useEffect(() => {
-    if (activity) {
-      setIsTableLoading(false);
-    }
-  }, [activity]);
 
   return (
     <>
@@ -93,7 +84,7 @@ export function ActivityFeed() {
                 filters={filters}
                 hasActiveFilters={hasActiveFilters}
                 onClearFilters={handleClearFilters}
-                isLoading={isTableLoading}
+                isLoading={isPending}
               />
             </ResizablePanel>
 

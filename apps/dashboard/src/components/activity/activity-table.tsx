@@ -52,7 +52,6 @@ export function ActivityTable({
     }
   );
 
-  // Combine external loading state with fetch loading state
   const isLoading = fetchLoading || externalLoading;
 
   useEffect(() => {

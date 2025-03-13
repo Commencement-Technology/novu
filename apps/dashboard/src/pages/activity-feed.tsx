@@ -19,7 +19,6 @@ import { ActivityError } from '@/components/activity/activity-error';
 export function ActivityFeed() {
   const { activityItemId, filters, filterValues, handleActivitySelect, handleFiltersChange } = useActivityUrlState();
   const { activity, isPending, error } = usePullActivity(activityItemId);
-  const [isTransactionLoading, setIsTransactionLoading] = useState(false);
   const [isTableLoading, setIsTableLoading] = useState(false);
 
   const hasActiveFilters = Object.entries(filters).some(([key, value]) => {
@@ -49,25 +48,16 @@ export function ActivityFeed() {
 
   const handleTransactionIdChange = useCallback(
     (newTransactionId: string, activityId?: string) => {
-      setIsTransactionLoading(true);
+      setIsTableLoading(true);
 
       if (activityId) {
         handleActivitySelect(activityId);
-      } else if (newTransactionId) {
-        handleFiltersChange({
-          ...filterValues,
-          transactionId: newTransactionId,
-        });
       } else {
         handleFiltersChange({
           ...filterValues,
+          ...(newTransactionId && { transactionId: newTransactionId }),
         });
       }
-
-      setTimeout(() => {
-        setIsTransactionLoading(false);
-        setIsTableLoading(false);
-      }, 5000);
     },
     [filterValues, handleFiltersChange, handleActivitySelect]
   );
@@ -78,7 +68,7 @@ export function ActivityFeed() {
 
   useEffect(() => {
     if (activity) {
-      setIsTransactionLoading(false);
+      setIsTableLoading(false);
     }
   }, [activity]);
 
@@ -126,7 +116,7 @@ export function ActivityFeed() {
                       className="bg-background h-full overflow-auto"
                     >
                       <ActivityPanel>
-                        {isPending || isTransactionLoading ? (
+                        {isPending ? (
                           <ActivitySkeleton />
                         ) : error || !activity ? (
                           <ActivityError />
@@ -139,7 +129,6 @@ export function ActivityFeed() {
                               onActivitySelect={handleActivitySelect}
                               onTransactionIdChange={handleTransactionIdChange}
                               onResendStart={handleResendStart}
-                              // onResendStart={handleResendStart}
                             />
                           </>
                         )}

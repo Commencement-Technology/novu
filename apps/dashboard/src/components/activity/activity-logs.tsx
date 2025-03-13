@@ -28,14 +28,12 @@ export function ActivityLogs({
   className,
   onActivitySelect,
   onTransactionIdChange,
-  onResendStart,
   children,
 }: {
   activity: IActivity;
   className?: string;
   onActivitySelect: (activityId: string) => void;
   onTransactionIdChange?: (transactionId: string, activityId?: string) => void;
-  onResendStart?: () => void;
   children?: React.ReactNode;
 }): JSX.Element {
   const isMerged = activity.jobs.some((job) => job.status === 'merged');
@@ -70,95 +68,89 @@ export function ActivityLogs({
     setIsPopoverOpen(false);
   }, []);
 
-  const handleResend = useCallback(
-    async (e?: React.MouseEvent) => {
-      try {
-        setIsResending(true);
+  const handleResend = useCallback(async () => {
+    try {
+      setIsResending(true);
 
-        onResendStart?.();
+      const {
+        data: { transactionId: newTransactionId },
+      } = await triggerWorkflow({
+        name: activity.template?.triggers[0].identifier ?? '',
+        to: activity.subscriber?.subscriberId,
+        payload: resentPayload,
+        environment: { _id: activity._environmentId } as IEnvironment,
+      });
 
-        const {
-          data: { transactionId: newTransactionId },
-        } = await triggerWorkflow({
-          name: activity.template?.triggers[0].identifier ?? '',
-          to: activity.subscriber?.subscriberId,
-          payload: resentPayload,
-          environment: { _id: activity._environmentId } as IEnvironment,
-        });
+      setIsResending(false);
 
-        setIsResending(false);
-
-        if (!newTransactionId) {
-          return showToast({
-            variant: 'lg',
-            children: ({ close }) => (
-              <>
-                <ToastIcon variant="error" />
-                <div className="flex flex-col gap-2">
-                  <span className="font-medium">Test workflow failed</span>
-                  <span className="text-foreground-600 inline">
-                    Workflow <span className="font-bold">{activity.template?.name}</span> cannot be triggered. Ensure
-                    that it is active and requires not further actions.
-                  </span>
-                </div>
-                <ToastClose onClick={close} />
-              </>
-            ),
-            options: {
-              position: 'bottom-right',
-            },
-          });
-        }
-
-        closePopover();
-        setIsFullscreenOpen(false);
-
-        toast.success('Notification resent successfully', {
-          description: `A new notification has been triggered with transaction ID: ${newTransactionId}`,
-        });
-
-        const checkAndUpdateTransaction = async () => {
-          if (currentEnvironment) {
-            const { data: activities } = await getActivityList({
-              environment: currentEnvironment,
-              page: 0,
-              limit: 1,
-              filters: {
-                transactionId: newTransactionId,
-              },
-            });
-
-            if (activities.length > 0) {
-              setIsResending(false);
-
-              queryClient.invalidateQueries({
-                queryKey: [QueryKeys.fetchActivities, activity._environmentId],
-              });
-              onTransactionIdChange?.(newTransactionId, activities[0]._id);
-              return;
-            }
-          }
-        };
-
-        setTimeout(checkAndUpdateTransaction, 1000);
-      } catch (e) {
-        setIsResending(false);
-        toast.error('Failed to trigger resend workflow', {
-          description: e instanceof Error ? e.message : 'There was an error triggering the resend workflow.',
+      if (!newTransactionId) {
+        return showToast({
+          variant: 'lg',
+          children: ({ close }) => (
+            <>
+              <ToastIcon variant="error" />
+              <div className="flex flex-col gap-2">
+                <span className="font-medium">Test workflow failed</span>
+                <span className="text-foreground-600 inline">
+                  Workflow <span className="font-bold">{activity.template?.name}</span> cannot be triggered. Ensure that
+                  it is active and requires not further actions.
+                </span>
+              </div>
+              <ToastClose onClick={close} />
+            </>
+          ),
+          options: {
+            position: 'bottom-right',
+          },
         });
       }
-    },
-    [
-      activity,
-      currentEnvironment,
-      resentPayload,
-      queryClient,
-      onResendStart,
-      onTransactionIdChange,
-      setIsFullscreenOpen,
-      closePopover,
-    ]
-  );
+
+      closePopover();
+      setIsFullscreenOpen(false);
+
+      toast.success('Notification resent successfully', {
+        description: `A new notification has been triggered with transaction ID: ${newTransactionId}`,
+      });
+
+      const checkAndUpdateTransaction = async () => {
+        if (currentEnvironment) {
+          const { data: activities } = await getActivityList({
+            environment: currentEnvironment,
+            page: 0,
+            limit: 1,
+            filters: {
+              transactionId: newTransactionId,
+            },
+          });
+
+          if (activities.length > 0) {
+            setIsResending(false);
+
+            queryClient.invalidateQueries({
+              queryKey: [QueryKeys.fetchActivities, activity._environmentId],
+            });
+            onTransactionIdChange?.(newTransactionId, activities[0]._id);
+            return;
+          }
+        }
+      };
+
+      setTimeout(checkAndUpdateTransaction, 1000);
+    } catch (e) {
+      setIsResending(false);
+      toast.error('Failed to trigger resend workflow', {
+        description: e instanceof Error ? e.message : 'There was an error triggering the resend workflow.',
+      });
+    }
+  }, [
+    activity,
+    currentEnvironment,
+    resentPayload,
+    queryClient,
+    onTransactionIdChange,
+    setIsFullscreenOpen,
+    closePopover,
+  ]);
 
   const handlePopoverOpenChange = useCallback((open: boolean) => {
     setIsPopoverOpen(open);
@@ -202,7 +194,7 @@ export function ActivityLogs({
                     variant="secondary"
                     mode="ghost"
                     size="sm"
-                    onClick={(e) => handleResend(e)}
+                    onClick={handleResend}
                     className="text-xs"
                     disabled={isResending}
                     type="button"
@@ -278,7 +270,7 @@ export function ActivityLogs({
                   variant="secondary"
                   mode="ghost"
                   size="sm"
-                  onClick={(e) => handleResend(e)}
+                  onClick={handleResend}
                   className="text-xs"
                   disabled={isResending}
                   type="button"

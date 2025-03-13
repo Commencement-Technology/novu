@@ -62,10 +62,6 @@ export function ActivityFeed() {
     [filterValues, handleFiltersChange, handleActivitySelect]
   );
 
-  const handleResendStart = useCallback(() => {
-    setIsTableLoading(true);
-  }, []);
-
   useEffect(() => {
     if (activity) {
       setIsTableLoading(false);
@@ -128,7 +124,6 @@ export function ActivityFeed() {
                               activity={activity}
                               onActivitySelect={handleActivitySelect}
                               onTransactionIdChange={handleTransactionIdChange}
-                              onResendStart={handleResendStart}
                             />
                           </>
                         )}

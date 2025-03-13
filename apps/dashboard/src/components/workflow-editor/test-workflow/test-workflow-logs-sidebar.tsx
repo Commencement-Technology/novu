@@ -61,14 +61,6 @@ export const TestWorkflowLogsSidebar = (props: TestWorkflowLogsSidebarProps) => 
     setIsTransactionChanging(true);
     setTransactionId(newTransactionId);
     setParentActivityId(undefined);
-
-    setTimeout(() => {
-      setIsTransactionChanging(false);
-    }, 5000);
-  }, []);
-
-  const handleResendStart = useCallback(() => {
-    setIsTransactionChanging(true);
   }, []);
 
   useEffect(() => {
@@ -77,21 +69,14 @@ export const TestWorkflowLogsSidebar = (props: TestWorkflowLogsSidebarProps) => 
     }
   }, [activity]);
 
-  // responsible for initial update from TestWorkflowTabs by props
   useEffect(() => {
-    if (!transactionId && !props.transactionId) {
-      return;
-    }
-
-    if (!transactionId && props.transactionId) {
-      setTransactionId(props.transactionId);
-    } else if (transactionId) {
+    if (!props.transactionId) {
       return;
     }
 
     setShouldRefetch(true);
-    setParentActivityId(undefined);
-  }, [transactionId, props.transactionId]);
+    setTransactionId(props.transactionId);
+  }, [props.transactionId]);
 
   return (
     <aside className="flex h-full max-h-full flex-1 flex-col overflow-auto">
@@ -110,7 +95,6 @@ export const TestWorkflowLogsSidebar = (props: TestWorkflowLogsSidebarProps) => 
                   activity={activity}
                   onActivitySelect={setParentActivityId}
                   onTransactionIdChange={handleTransactionIdChange}
-                  onResendStart={handleResendStart}
                 />
               </React.Fragment>
             )}

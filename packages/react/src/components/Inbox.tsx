@@ -6,6 +6,7 @@ import { useRenderer } from '../context/RendererContext';
 import { InternalNovuProvider, useNovu, useUnsafeNovu } from '../hooks/NovuProvider';
 import { NovuUI } from './NovuUI';
 import { withRenderer } from './Renderer';
+import { useDataRef } from '../hooks/internal/useDataRef';
 
 export type InboxProps = DefaultProps | WithChildrenProps;
 
@@ -13,6 +14,8 @@ const _DefaultInbox = (props: DefaultInboxProps) => {
   const {
     open,
     renderNotification,
+    renderSubject,
+    renderBody,
     renderBell,
     onNotificationClick,
     onPrimaryActionClick,
@@ -25,13 +28,33 @@ const _DefaultInbox = (props: DefaultInboxProps) => {
 
   const mount = React.useCallback(
     (element: HTMLElement) => {
+      if (renderNotification) {
+        return novuUI.mountComponent({
+          name: 'Inbox',
+          props: {
+            open,
+            renderNotification: renderNotification
+              ? (el, notification) => mountElement(el, renderNotification(notification))
+              : undefined,
+            renderBell: renderBell ? (el, unreadCount) => mountElement(el, renderBell(unreadCount)) : undefined,
+            onNotificationClick,
+            onPrimaryActionClick,
+            onSecondaryActionClick,
+            placementOffset,
+            placement,
+          },
+          element,
+        });
+      }
+
       return novuUI.mountComponent({
         name: 'Inbox',
         props: {
           open,
-          renderNotification: renderNotification
-            ? (el, notification) => mountElement(el, renderNotification(notification))
+          renderSubject: renderSubject
+            ? (el, notification) => mountElement(el, renderSubject(notification))
             : undefined,
+          renderBody: renderBody ? (el, notification) => mountElement(el, renderBody(notification)) : undefined,
           renderBell: renderBell ? (el, unreadCount) => mountElement(el, renderBell(unreadCount)) : undefined,
           onNotificationClick,
           onPrimaryActionClick,
@@ -42,7 +65,16 @@ const _DefaultInbox = (props: DefaultInboxProps) => {
         element,
       });
     },
-    [open, renderNotification, renderBell, onNotificationClick, onPrimaryActionClick, onSecondaryActionClick]
+    [
+      open,
+      renderNotification,
+      renderSubject,
+      renderBody,
+      renderBell,
+      onNotificationClick,
+      onPrimaryActionClick,
+      onSecondaryActionClick,
+    ]
   );
 
   return <Mounter mount={mount} />;
@@ -119,6 +151,8 @@ const InboxChild = React.memo((props: InboxProps) => {
   const {
     open,
     renderNotification,
+    renderSubject,
+    renderBody,
     renderBell,
     onNotificationClick,
     onPrimaryActionClick,
@@ -132,6 +166,8 @@ const InboxChild = React.memo((props: InboxProps) => {
       <DefaultInbox
         open={open}
         renderNotification={renderNotification}
+        renderSubject={renderSubject}
+        renderBody={renderBody}
         renderBell={renderBell}
         onNotificationClick={onNotificationClick}
         onPrimaryActionClick={onPrimaryActionClick}

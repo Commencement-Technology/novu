@@ -124,8 +124,6 @@ export function ActivityLogs({
           });
 
           if (activities.length > 0) {
-            setIsResending(false);
-
             queryClient.invalidateQueries({
               queryKey: [QueryKeys.fetchActivities, activity._environmentId],
             });
@@ -152,16 +150,6 @@ export function ActivityLogs({
     closePopover,
   ]);
 
-  const handlePopoverOpenChange = useCallback((open: boolean) => {
-    setIsPopoverOpen(open);
-  }, []);
-
-  const handleViewPayloadClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    setIsPopoverOpen(true);
-  }, []);
-
   return (
     <>
       <motion.div
@@ -174,13 +162,13 @@ export function ActivityLogs({
         </div>
 
         {payload && (
-          <Popover open={isPopoverOpen} onOpenChange={handlePopoverOpenChange}>
+          <Popover open={isPopoverOpen} onOpenChange={(open) => setIsPopoverOpen(open)}>
             <PopoverTrigger asChild>
               <div className="flex items-center gap-1">
                 <RiCodeBlock className="size-3" />
                 <button
                   className="text-foreground-600 hover:text-foreground-950 text-xs underline transition-colors"
-                  onClick={handleViewPayloadClick}
+                  onClick={() => setIsPopoverOpen(true)}
                 >
                   View request payload
                 </button>
@@ -207,11 +195,7 @@ export function ActivityLogs({
                     mode="ghost"
                     size="sm"
                     className="text-xs"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      e.preventDefault();
-                      closePopover();
-                    }}
+                    onClick={closePopover}
                     type="button"
                   >
                     <RiCloseLine className="h-4 w-4" />

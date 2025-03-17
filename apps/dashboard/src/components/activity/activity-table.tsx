@@ -31,18 +31,12 @@ export function ActivityTable({
   filters,
   hasActiveFilters,
   onClearFilters,
-  isLoading: externalLoading = false,
 }: ActivityTableProps) {
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
   const page = parsePageParam(searchParams.get('page'));
-  const {
-    activities,
-    isLoading: fetchLoading,
-    hasMore,
-    error,
-  } = useFetchActivities(
+  const { activities, isLoading, hasMore, error } = useFetchActivities(
     {
       filters,
       page,
@@ -51,8 +45,6 @@ export function ActivityTable({
       refetchOnWindowFocus: true,
     }
   );
-
-  const isLoading = fetchLoading || externalLoading;
 
   useEffect(() => {
     if (error) {

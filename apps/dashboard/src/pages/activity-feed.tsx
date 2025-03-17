@@ -84,7 +84,6 @@ export function ActivityFeed() {
                 filters={filters}
                 hasActiveFilters={hasActiveFilters}
                 onClearFilters={handleClearFilters}
-                isLoading={isPending}
               />
             </ResizablePanel>
 

@@ -31,11 +31,13 @@ export class CreateMessageTemplate {
       layoutId = command.layoutId;
     }
 
+    const shouldSanitize = command.contentType === 'editor' && command.type !== StepTypeEnum.CHAT;
+
     let item: MessageTemplateEntity = await this.messageTemplateRepository.create({
       cta: command.cta,
       name: command.name,
       variables: command.variables ? normalizeVariantDefault(command.variables) : undefined,
-      content: command.contentType === 'editor' ? sanitizeMessageContent(command.content) : command.content,
+      content: shouldSanitize ? sanitizeMessageContent(command.content) : command.content,
       contentType: command.contentType,
       subject: command.subject,
       title: command.title,

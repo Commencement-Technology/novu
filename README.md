@@ -17,17 +17,18 @@
   <a href="https://www.npmjs.com/package/@novu/react">
     <img src="https://img.shields.io/npm/v/@novu/react" alt="NPM">
   </a>
+  <!-- TODO: Replace this with @novu/api as soon as the NPM download traffic switches to the new package -->
   <a href="https://www.npmjs.com/package/@novu/node">
     <img src="https://img.shields.io/npm/dm/@novu/node" alt="npm downloads">
   </a>
 </p>
 
 <h1 align="center">
-  The open source notification platform
+  The <Inbox /> infrastructure for modern products
 </h1>
 
 <div align="center">
-  Novu is the easy button for developer teams that need to quickly integrate notifications into their application, and enables product teams to own notifications content and messaging.
+  The notification platform that turns complex multi-channel delivery into a single component. Built for developers, designed for growth, powered by open source.
 </div>
 
 <p align="center">

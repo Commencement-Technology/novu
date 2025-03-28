@@ -1,243 +1,110 @@
 import { HttpService } from '@nestjs/axios';
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { lastValueFrom } from 'rxjs';
-import { EnvironmentEntity, EnvironmentRepository, OrganizationRepository } from '@novu/dal';
+import { OrganizationRepository } from '@novu/dal';
+
 import { ApiException } from '../../../shared/exceptions/api.exception';
-import { GetVercelConfigurationCommand } from '../get-vercel-configuration/get-vercel-configuration.command';
-import { GetVercelConfiguration } from '../get-vercel-configuration/get-vercel-configuration.usecase';
-import { GetVercelProjects } from '../get-vercel-projects/get-vercel-projects.usecase';
 import { UpdateVercelConfigurationCommand } from './update-vercel-configuration.command';
-
-interface IBaseEnvironment {
-  token: string;
-  teamId: string | null;
-  clientKey: string;
-  privateKey: string;
-}
-interface ISetEnvironment extends IBaseEnvironment {
-  projectIds: string[];
-}
-
-interface IUpdateEnvironment extends IBaseEnvironment {
-  projectDetails: ProjectDetails[];
-}
+import { CompleteVercelIntegration } from '../complete-vercel-integration/complete-vercel-integration.usecase';
+import { CompleteVercelIntegrationCommand } from '../complete-vercel-integration/complete-vercel-integration.command';
 
 interface IRemoveEnvironment {
-  removedProjectDetails: ProjectDetails[];
+  vercelLinkedProjects: ProjectDetails[];
   token: string;
   teamId: string | null;
 }
 
 type ProjectDetails = {
   projectId: string;
-  clientEnvId: string;
-  secretEnvId: string;
-};
-
-type NewAndUpdatedProjectData = {
-  updateProjectDetails: ProjectDetails[];
-  addProjectIds: string[];
-};
-
-type AllMappedProjectData = NewAndUpdatedProjectData & {
-  removedProjectDetails: ProjectDetails[];
-};
-
-type MapProjectkeys = NewAndUpdatedProjectData & {
-  privateKey: string;
-  clientKey: string;
+  clientAppIdEnv?: string;
+  secretKeyEnv?: string;
+  nextClientAppIdEnv?: string;
 };
 
 @Injectable()
 export class UpdateVercelConfiguration {
   constructor(
     private httpService: HttpService,
-    private environmentRepository: EnvironmentRepository,
-    private getVercelProjectsUsecase: GetVercelProjects,
-    private organizationRepository: OrganizationRepository,
-    private getVercelConfigurationUsecase: GetVercelConfiguration
+    private completeVercelIntegration: CompleteVercelIntegration,
+    private organizationRepository: OrganizationRepository
   ) {}
 
   async execute(command: UpdateVercelConfigurationCommand): Promise<{ success: boolean }> {
     try {
-      const organizationIds = Object.keys(command.data);
-      const projectIds = Object.keys(command.data).reduce<string[]>((history, current) => {
-        if (!command.data[current]) return history;
+      const { organizationId, configurationId } = command;
 
-        return history.concat(command.data[current]);
-      }, []);
-
-      const envKeys = await this.getEnvKeys(organizationIds);
-
-      const configurationDetails = await this.getVercelProjectsUsecase.getVercelConfiguration(command.environmentId, {
-        configurationId: command.configurationId,
-        userId: command.userId,
+      const configuration = await this.findPartnerConfigurationDetail({
+        organizationId,
+        configurationId,
       });
 
-      await this.updateBridgeUrl(command.environmentId, projectIds[0], configurationDetails.accessToken);
+      const organizationsWithConfiguration = await this.organizationRepository.findPartnerConfigurationDetails({
+        userId: command.userId,
+        configurationId: command.configurationId,
+      });
 
-      const { newAndUpdatedProjectIds, removedProjectIds } = await this.getUpdatedAndRemovedProjectIds(
-        command,
-        projectIds
-      );
+      const allOldProjectIds = [
+        ...new Set(
+          organizationsWithConfiguration.reduce<string[]>((acc, org) => {
+            return acc.concat(org.partnerConfigurations?.[0].projectIds || []);
+          }, [])
+        ),
+      ];
 
-      const { addProjectIds, updateProjectDetails, removedProjectDetails } = await this.getVercelProjects(
-        configurationDetails.accessToken,
-        configurationDetails.teamId,
-        newAndUpdatedProjectIds,
-        removedProjectIds
+      const vercelLinkedProjects = await this.getVercelLinkedProjects(
+        configuration.accessToken,
+        configuration.teamId,
+        allOldProjectIds
       );
 
       await this.removeEnvironmentVariables({
-        removedProjectDetails,
-        teamId: configurationDetails.teamId,
-        token: configurationDetails.accessToken,
+        vercelLinkedProjects,
+        teamId: configuration.teamId,
+        token: configuration.accessToken,
       });
 
-      const mappedProjectData = this.mapProjectKeys(envKeys, command.data, {
-        updateProjectDetails,
-        addProjectIds,
-      });
+      await this.completeVercelIntegration.execute(
+        CompleteVercelIntegrationCommand.create({
+          ...command,
+        })
+      );
 
-      for (const key of Object.keys(mappedProjectData)) {
-        await this.setEnvironmentVariables({
-          clientKey: mappedProjectData[key].clientKey,
-          privateKey: mappedProjectData[key].privateKey,
-          projectIds: mappedProjectData[key].addProjectIds,
-          teamId: configurationDetails.teamId,
-          token: configurationDetails.accessToken,
-        });
-        await this.updateEnvironmentVariables({
-          clientKey: mappedProjectData[key].clientKey,
-          privateKey: mappedProjectData[key].privateKey,
-          projectDetails: mappedProjectData[key].updateProjectDetails,
-          teamId: configurationDetails.teamId,
-          token: configurationDetails.accessToken,
-        });
-      }
-
-      await this.saveProjectIds(command);
-
-      return {
-        success: true,
-      };
+      return { success: true };
     } catch (error) {
       throw new ApiException(error.message);
     }
   }
 
-  private async getEnvKeys(organizationIds: string[]): Promise<EnvironmentEntity[]> {
-    return await this.environmentRepository.find(
+  async findPartnerConfigurationDetail({
+    organizationId,
+    configurationId,
+  }: {
+    organizationId: string;
+    configurationId: string;
+  }) {
+    const organization = await this.organizationRepository.findOne(
       {
-        _organizationId: organizationIds,
+        _id: organizationId,
+        'partnerConfigurations.configurationId': configurationId,
       },
-      'apiKeys identifier _organizationId'
+      { 'partnerConfigurations.$': 1 }
     );
-  }
 
-  private mapProjectKeys(
-    envData: EnvironmentEntity[],
-    projectData: Record<string, string[]>,
-    projectDetails: NewAndUpdatedProjectData
-  ) {
-    const { addProjectIds, updateProjectDetails } = projectDetails;
-
-    return envData.reduce<Record<string, MapProjectkeys>>((prev, curr) => {
-      const projectIds = projectData[curr._organizationId];
-      prev[curr._organizationId] = {
-        privateKey: curr.apiKeys[0].key,
-        clientKey: curr.identifier,
-        updateProjectDetails: updateProjectDetails.filter((detail) => projectIds.includes(detail.projectId)),
-        addProjectIds: projectIds.filter((id) => addProjectIds.includes(id)),
-      };
-
-      return prev;
-    }, {});
-  }
-
-  private async updateBridgeUrl(environmentId: string, projectIds: string, accessToken: string) {
-    try {
-      const getDomainsResponse = await lastValueFrom(
-        this.httpService.get(`${process.env.VERCEL_BASE_URL}/v9/projects/${projectIds}/domains`, {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        })
-      );
-
-      const bridgeUrl = getDomainsResponse.data.domains[0].name;
-
-      const fullBridgeUrl = `https://${bridgeUrl}/api/novu`;
-      await this.environmentRepository.update(
-        { _id: environmentId },
-        {
-          $set: {
-            echo: {
-              url: fullBridgeUrl,
-            },
-            bridge: {
-              url: fullBridgeUrl,
-            },
-          },
-        }
-      );
-    } catch (error) {
-      Logger.error(error, 'Error updating bridge url');
+    const configuration = organization?.partnerConfigurations?.find(
+      (config) => config.configurationId === configurationId
+    );
+    if (!organization || !organization.partnerConfigurations?.length || !configuration) {
+      throw new BadRequestException('No configuration found for vercel');
     }
+
+    return configuration;
   }
 
-  private async setEnvironmentVariables({
-    clientKey,
-    projectIds,
-    privateKey,
-    teamId,
-    token,
-  }: ISetEnvironment): Promise<void> {
-    const projectApiUrl = `${process.env.VERCEL_BASE_URL}/v9/projects`;
-    const target = ['production', 'preview', 'development'];
-    const type = 'encrypted';
-
-    const apiKeys = [
-      {
-        target,
-        type,
-        value: clientKey,
-        key: 'NOVU_CLIENT_APP_ID',
-      },
-      {
-        target,
-        type,
-        value: privateKey,
-        key: 'NOVU_SECRET_KEY',
-      },
-      {
-        target,
-        type,
-        value: clientKey,
-        key: 'NEXT_PUBLIC_NOVU_CLIENT_APP_ID',
-      },
-    ];
-
-    await Promise.all(
-      projectIds.map((projectId) =>
-        lastValueFrom(
-          this.httpService.post(`${projectApiUrl}/${projectId}/env${teamId ? `?teamId=${teamId}` : ''}`, apiKeys, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-          })
-        )
-      )
-    );
-  }
-
-  private async getVercelProjects(
+  private async getVercelLinkedProjects(
     accessToken: string,
     teamId: string | null,
-    newAndUpdatedProjectIds: string[],
-    removedProjectIds: string[]
-  ) {
+    allOldProjectIds: string[]
+  ): Promise<ProjectDetails[]> {
     const response = await lastValueFrom(
       this.httpService.get(`${process.env.VERCEL_BASE_URL}/v4/projects${teamId ? `?teamId=${teamId}` : ''}`, {
         headers: {
@@ -245,161 +112,61 @@ export class UpdateVercelConfiguration {
         },
       })
     );
+    const vercelProjects = response.data.projects as any[];
+    const filteredVercelProjects = vercelProjects.filter((project) => allOldProjectIds.includes(project.id));
 
-    return this.mapProjects(response.data.projects, newAndUpdatedProjectIds, removedProjectIds);
+    return filteredVercelProjects.map<ProjectDetails>((project) => {
+      const { id } = project;
+      const vercelEnvs = project?.env;
+      const nextClientAppIdEnv = vercelEnvs?.find((e) => e.key === 'NEXT_PUBLIC_NOVU_CLIENT_APP_ID');
+      const clientAppIdEnv = vercelEnvs?.find((e) => e.key === 'NOVU_CLIENT_APP_ID');
+      const secretKeyEnv = vercelEnvs?.find((e) => e.key === 'NOVU_SECRET_KEY');
+
+      return {
+        projectId: id,
+        clientAppIdEnv: clientAppIdEnv?.id,
+        secretKeyEnv: secretKeyEnv?.id,
+        nextClientAppIdEnv: nextClientAppIdEnv?.id,
+      };
+    });
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private mapProjects(projects: any[], newAndUpdatedProjectIds: string[], removedProjectIds: string[]) {
-    return projects.reduce<AllMappedProjectData>(
-      (acc, curr) => {
-        const { id } = curr;
-        const vercelEnvs = curr?.env;
-        const clientEnv = vercelEnvs?.find((e) => e.key === 'NOVU_CLIENT_APP_ID');
-        const secretEnv = vercelEnvs?.find((e) => e.key === 'NOVU_SECRET_KEY');
-        if (newAndUpdatedProjectIds.includes(id)) {
-          if (clientEnv && secretEnv) {
-            acc.updateProjectDetails.push({
-              projectId: id,
-              clientEnvId: clientEnv.id,
-              secretEnvId: secretEnv.id,
-            });
-          } else {
-            acc.addProjectIds.push(id);
-          }
-        }
-
-        if (removedProjectIds.includes(id)) {
-          acc.removedProjectDetails.push({
-            projectId: id,
-            clientEnvId: clientEnv.id,
-            secretEnvId: secretEnv.id,
-          });
-        }
-
-        return acc;
-      },
-      { updateProjectDetails: [], addProjectIds: [], removedProjectDetails: [] }
-    );
-  }
-
-  private async saveProjectIds(command: UpdateVercelConfigurationCommand) {
-    await this.organizationRepository.bulkUpdatePartnerConfiguration(
-      command.userId,
-      command.data,
-      command.configurationId
-    );
-  }
-
-  private async updateEnvironmentVariables({
-    clientKey,
-    projectDetails,
-    privateKey,
-    teamId,
-    token,
-  }: IUpdateEnvironment): Promise<void> {
+  private async removeEnvironmentVariables({ vercelLinkedProjects, teamId, token }: IRemoveEnvironment): Promise<void> {
     const projectApiUrl = `${process.env.VERCEL_BASE_URL}/v9/projects`;
 
     await Promise.all(
-      projectDetails.map((detail) => {
-        const updateClientEnvApiUrl = `${projectApiUrl}/${detail.projectId}/env/${detail.clientEnvId}${
-          teamId ? `?teamId=${teamId}` : ''
-        }`;
+      vercelLinkedProjects.map((detail) => {
+        const urls: string[] = [];
+        if (detail.nextClientAppIdEnv) {
+          urls.push(
+            `${projectApiUrl}/${detail.projectId}/env/${detail.nextClientAppIdEnv}${teamId ? `?teamId=${teamId}` : ''}`
+          );
+        }
 
-        const updateSecretEnvApiUrl = `${projectApiUrl}/${detail.projectId}/env/${detail.secretEnvId}${
-          teamId ? `?teamId=${teamId}` : ''
-        }`;
+        if (detail.clientAppIdEnv) {
+          urls.push(
+            `${projectApiUrl}/${detail.projectId}/env/${detail.clientAppIdEnv}${teamId ? `?teamId=${teamId}` : ''}`
+          );
+        }
 
-        return Promise.all([
+        if (detail.secretKeyEnv) {
+          urls.push(
+            `${projectApiUrl}/${detail.projectId}/env/${detail.secretKeyEnv}${teamId ? `?teamId=${teamId}` : ''}`
+          );
+        }
+
+        const requests = urls.map((url) =>
           lastValueFrom(
-            this.httpService.patch(
-              updateClientEnvApiUrl,
-              {
-                value: clientKey,
-              },
-              {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                  'Content-Type': 'application/json',
-                },
-              }
-            )
-          ),
-          lastValueFrom(
-            this.httpService.patch(
-              updateSecretEnvApiUrl,
-              {
-                value: privateKey,
-              },
-              {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                  'Content-Type': 'application/json',
-                },
-              }
-            )
-          ),
-        ]);
-      })
-    );
-  }
-
-  private async removeEnvironmentVariables({
-    removedProjectDetails,
-    teamId,
-    token,
-  }: IRemoveEnvironment): Promise<void> {
-    const projectApiUrl = `${process.env.VERCEL_BASE_URL}/v9/projects`;
-
-    await Promise.all(
-      removedProjectDetails.map((detail) => {
-        const removeClientEnvApiUrl = `${projectApiUrl}/${detail.projectId}/env/${detail.clientEnvId}${
-          teamId ? `?teamId=${teamId}` : ''
-        }`;
-
-        const removeSecretEnvApiUrl = `${projectApiUrl}/${detail.projectId}/env/${detail.secretEnvId}${
-          teamId ? `?teamId=${teamId}` : ''
-        }`;
-
-        return Promise.all([
-          lastValueFrom(
-            this.httpService.delete(removeClientEnvApiUrl, {
+            this.httpService.delete(url, {
               headers: {
                 Authorization: `Bearer ${token}`,
               },
             })
-          ),
-          lastValueFrom(
-            this.httpService.delete(removeSecretEnvApiUrl, {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            })
-          ),
-        ]);
+          )
+        );
+
+        return Promise.all(requests);
       })
     );
-  }
-
-  private async getUpdatedAndRemovedProjectIds(command: UpdateVercelConfigurationCommand, newProjectIds: string[]) {
-    const data = await this.getVercelConfigurationUsecase.execute(
-      GetVercelConfigurationCommand.create({
-        configurationId: command.configurationId,
-        environmentId: command.environmentId,
-        organizationId: command.organizationId,
-        userId: command.userId,
-      })
-    );
-    const oldProjectIds = data.reduce<string[]>((acc, curr) => {
-      return acc.concat(curr.projectIds);
-    }, []);
-
-    const removedProjectIds = oldProjectIds.filter((projectId) => !newProjectIds.includes(projectId));
-    const newAndUpdatedProjectIds = newProjectIds.filter((projectId) => !removedProjectIds.includes(projectId));
-
-    return {
-      removedProjectIds,
-      newAndUpdatedProjectIds,
-    };
   }
 }

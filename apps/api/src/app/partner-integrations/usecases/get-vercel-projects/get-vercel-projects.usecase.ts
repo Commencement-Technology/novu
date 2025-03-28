@@ -1,14 +1,10 @@
 import { HttpService } from '@nestjs/axios';
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { lastValueFrom } from 'rxjs';
 import { OrganizationRepository } from '@novu/dal';
+
 import { GetVercelProjectsCommand } from './get-vercel-projects.command';
 import { ApiException } from '../../../shared/exceptions/api.exception';
-
-interface IGetVercelConfiguration {
-  userId: string;
-  configurationId: string;
-}
 
 @Injectable()
 export class GetVercelProjects {
@@ -19,9 +15,9 @@ export class GetVercelProjects {
 
   async execute(command: GetVercelProjectsCommand) {
     try {
-      const configuration = await this.getVercelConfiguration(command.environmentId, {
+      const configuration = await this.findPartnerConfigurationDetail({
+        organizationId: command.organizationId,
         configurationId: command.configurationId,
-        userId: command.userId,
       });
 
       if (!configuration || !configuration.accessToken) {
@@ -36,36 +32,45 @@ export class GetVercelProjects {
     }
   }
 
-  async getVercelConfiguration(environmentId: string, payload: IGetVercelConfiguration) {
-    const organization = await this.organizationRepository.findPartnerConfigurationDetails(
-      environmentId,
-      payload.userId,
-      payload.configurationId
+  async findPartnerConfigurationDetail({
+    organizationId,
+    configurationId,
+  }: {
+    organizationId: string;
+    configurationId: string;
+  }) {
+    const organization = await this.organizationRepository.findOne(
+      {
+        _id: organizationId,
+        'partnerConfigurations.configurationId': configurationId,
+      },
+      { 'partnerConfigurations.$': 1 }
     );
 
-    if (!organization || !organization.length || !organization[0].partnerConfigurations?.length) {
-      throw new Error('No configuration found for vercel');
+    const configuration = organization?.partnerConfigurations?.find(
+      (config) => config.configurationId === configurationId
+    );
+    if (!organization || !organization.partnerConfigurations?.length || !configuration) {
+      throw new BadRequestException('No configuration found for vercel');
     }
 
-    return {
-      accessToken: organization[0].partnerConfigurations[0].accessToken as string,
-      teamId: organization[0].partnerConfigurations[0].teamId as string,
-    };
+    return configuration;
   }
 
   private async getVercelProjects(accessToken: string, teamId: string | null, until?: string) {
-    let queryParams = '';
+    const queryParams = new URLSearchParams();
+    queryParams.set('limit', '100');
 
     if (teamId) {
-      queryParams += `teamId=${teamId}&`;
+      queryParams.set('teamId', teamId);
     }
 
     if (until) {
-      queryParams += `until=${until}`;
+      queryParams.set('until', until);
     }
 
     const response = await lastValueFrom(
-      this.httpService.get(`${process.env.VERCEL_BASE_URL}/v9/projects${queryParams ? `?${queryParams}` : ''}`, {
+      this.httpService.get(`${process.env.VERCEL_BASE_URL}/v10/projects?${queryParams.toString()}`, {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },

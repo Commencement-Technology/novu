@@ -1,7 +1,8 @@
 import { HttpService } from '@nestjs/axios';
 import { Injectable } from '@nestjs/common';
 import { lastValueFrom } from 'rxjs';
-import { OrganizationRepository, PartnerTypeEnum, IPartnerConfiguration } from '@novu/dal';
+import { OrganizationRepository, PartnerTypeEnum } from '@novu/dal';
+
 import { ApiException } from '../../../shared/exceptions/api.exception';
 import { SetupVercelConfigurationResponseDto } from '../../dtos/setup-vercel-integration-response.dto';
 import { SetVercelConfigurationCommand } from './set-vercel-configuration.command';
@@ -10,7 +11,6 @@ import { SetVercelConfigurationCommand } from './set-vercel-configuration.comman
 export class SetVercelConfiguration {
   constructor(
     private httpService: HttpService,
-
     private organizationRepository: OrganizationRepository
   ) {}
 
@@ -18,16 +18,17 @@ export class SetVercelConfiguration {
     try {
       const tokenData = await this.getVercelToken(command.vercelIntegrationCode);
 
-      if (!tokenData) throw new ApiException('No token data found');
-
-      const saveConfigurationData = {
+      const configuration = {
         accessToken: tokenData.accessToken,
         configurationId: command.configurationId,
-        teamId: tokenData.teamId as string,
+        teamId: tokenData.teamId,
         partnerType: PartnerTypeEnum.VERCEL,
       };
 
-      await this.saveConfiguration(command.organizationId, command.userId, saveConfigurationData);
+      await this.organizationRepository.upsertPartnerConfiguration({
+        organizationId: command.organizationId,
+        configuration,
+      });
 
       return {
         success: true,
@@ -41,8 +42,7 @@ export class SetVercelConfiguration {
 
   private async getVercelToken(code: string): Promise<{
     accessToken: string;
-    userId: string;
-    teamId: string | null;
+    teamId: string;
   }> {
     try {
       const postData = new URLSearchParams({
@@ -64,7 +64,6 @@ export class SetVercelConfiguration {
 
       return {
         accessToken: data.access_token,
-        userId: data.user_id,
         teamId: data.team_id,
       };
     } catch (error) {
@@ -72,9 +71,5 @@ export class SetVercelConfiguration {
         error?.response?.data?.error_description || error?.response?.data?.message || error.message
       );
     }
-  }
-
-  private async saveConfiguration(organizationId: string, userId: string, configuration: IPartnerConfiguration) {
-    await this.organizationRepository.updatePartnerConfiguration(organizationId, userId, configuration);
   }
 }

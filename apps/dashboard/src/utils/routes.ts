@@ -36,6 +36,7 @@ export const ROUTES = {
   SUBSCRIBERS: '/env/:environmentSlug/subscribers',
   EDIT_SUBSCRIBER: '/env/:environmentSlug/subscribers/:subscriberId',
   CREATE_SUBSCRIBER: '/env/:environmentSlug/subscribers/create',
+  PARTNER_INTEGRATIONS_VERCEL: '/partner-integrations/vercel',
 } as const;
 
 export const buildRoute = (route: string, params: Record<string, string>) => {

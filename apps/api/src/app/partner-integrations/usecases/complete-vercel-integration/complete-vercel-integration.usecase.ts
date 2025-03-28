@@ -1,6 +1,6 @@
 import { HttpService } from '@nestjs/axios';
-import { Injectable, Logger } from '@nestjs/common';
-import { catchError, lastValueFrom } from 'rxjs';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { lastValueFrom } from 'rxjs';
 import {
   CommunityUserRepository,
   EnvironmentEntity,
@@ -11,17 +11,15 @@ import {
 import { AnalyticsService, decryptApiKey } from '@novu/application-generic';
 
 import { CompleteVercelIntegrationCommand } from './complete-vercel-integration.command';
-import { GetVercelProjects } from '../get-vercel-projects/get-vercel-projects.usecase';
 import { ApiException } from '../../../shared/exceptions/api.exception';
 import { Sync } from '../../../bridge/usecases/sync';
 
 interface ISetEnvironment {
   name: string;
-  envId: string;
   token: string;
   projectIds: string[];
   teamId: string | null;
-  clientKey: string;
+  applicationIdentifier: string;
   privateKey: string;
 }
 
@@ -30,7 +28,6 @@ export class CompleteVercelIntegration {
   constructor(
     private httpService: HttpService,
     private environmentRepository: EnvironmentRepository,
-    private getVercelProjectsUsecase: GetVercelProjects,
     private organizationRepository: OrganizationRepository,
     private analyticsService: AnalyticsService,
     private syncUsecase: Sync,
@@ -40,46 +37,40 @@ export class CompleteVercelIntegration {
 
   async execute(command: CompleteVercelIntegrationCommand): Promise<{ success: boolean }> {
     try {
-      const organizationIdsMap = Object.keys(command.data);
-      const organizationIds: string[] = [];
-      const internalOrgMap = {};
-      for (const orgId of organizationIdsMap) {
-        const internalOrg = await this.organizationRepository.findById(orgId);
-        if (internalOrg) {
-          organizationIds.push(internalOrg._id);
+      const { data: orgIdsToProjectIds, userId, organizationId, configurationId } = command;
+      const organizationIds = Object.keys(orgIdsToProjectIds);
 
-          internalOrgMap[internalOrg._id] = command.data[orgId];
-        }
-      }
-
-      const envKeys = await this.getEnvKeys(organizationIds);
-
-      const mappedProjectData = this.mapProjectKeys(envKeys, internalOrgMap);
-
-      const configurationDetails = await this.getVercelProjectsUsecase.getVercelConfiguration(command.environmentId, {
-        configurationId: command.configurationId,
-        userId: command.userId,
+      const configuration = await this.findPartnerConfigurationDetail({
+        organizationId,
+        configurationId,
       });
 
-      await this.saveProjectIds(command);
+      await this.organizationRepository.bulkUpdatePartnerConfiguration({
+        userId: command.userId,
+        data: command.data,
+        configuration,
+      });
 
-      for (const env of mappedProjectData) {
-        await this.setEnvironments({
+      const environments = await this.getEnvironments(organizationIds);
+
+      for (const env of environments) {
+        const projectIds = orgIdsToProjectIds[env._organizationId];
+        await this.setEnvironmentVariables({
           name: env.name,
-          envId: env.envId,
-          clientKey: env.clientKey,
-          privateKey: env.privateKey,
-          projectIds: env.projectIds,
-          teamId: configurationDetails.teamId,
-          token: configurationDetails.accessToken,
+          applicationIdentifier: env.identifier,
+          privateKey: decryptApiKey(env.apiKeys[0].key),
+          projectIds,
+          teamId: configuration.teamId,
+          token: configuration.accessToken,
         });
 
         try {
           await this.updateBridgeUrl(
-            env.envId,
-            env.projectIds[0],
-            configurationDetails.accessToken,
-            configurationDetails.teamId,
+            env._id,
+            env.name,
+            projectIds[0],
+            configuration.accessToken,
+            configuration.teamId,
             env._organizationId
           );
         } catch (error) {
@@ -87,8 +78,8 @@ export class CompleteVercelIntegration {
         }
       }
 
-      this.analyticsService.track('Create Vercel Integration - [Partner Integrations]', command.userId, {
-        _organization: command.organizationId,
+      this.analyticsService.track('Create Vercel Integration - [Partner Integrations]', userId, {
+        _organization: organizationId,
       });
 
       return {
@@ -100,16 +91,42 @@ export class CompleteVercelIntegration {
     }
   }
 
+  async findPartnerConfigurationDetail({
+    organizationId,
+    configurationId,
+  }: {
+    organizationId: string;
+    configurationId: string;
+  }) {
+    const organization = await this.organizationRepository.findOne(
+      {
+        _id: organizationId,
+        'partnerConfigurations.configurationId': configurationId,
+      },
+      { 'partnerConfigurations.$': 1 }
+    );
+
+    const configuration = organization?.partnerConfigurations?.find(
+      (config) => config.configurationId === configurationId
+    );
+    if (!organization || !organization.partnerConfigurations?.length || !configuration) {
+      throw new BadRequestException('No configuration found for vercel');
+    }
+
+    return configuration;
+  }
+
   private async updateBridgeUrl(
     environmentId: string,
-    projectIds: string,
+    environmentName: string,
+    projectId: string,
     accessToken: string,
     teamId: string,
     organizationId: string
   ) {
     try {
       const getDomainsResponse = await lastValueFrom(
-        this.httpService.get(`${process.env.VERCEL_BASE_URL}/v9/projects/${projectIds}?teamId=${teamId}`, {
+        this.httpService.get(`${process.env.VERCEL_BASE_URL}/v9/projects/${projectId}?teamId=${teamId}`, {
           headers: {
             Authorization: `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
@@ -117,8 +134,15 @@ export class CompleteVercelIntegration {
         })
       );
 
-      const production = getDomainsResponse.data?.targets?.production;
-      const bridgeUrl = production?.meta?.branchAlias || production?.automaticAliases[0];
+      const vercelAvailableTargets = getDomainsResponse.data?.targets;
+      let vercelTarget;
+      if (environmentName.toLowerCase() === 'production') {
+        vercelTarget = vercelAvailableTargets?.production;
+      } else {
+        vercelTarget = vercelAvailableTargets?.development;
+      }
+      const alias = vercelTarget?.alias?.sort((a, b) => a.length - b.length)[0];
+      const bridgeUrl = alias || vercelTarget?.meta?.branchAlias || vercelTarget?.automaticAliases[0];
 
       if (!bridgeUrl) {
         return;
@@ -149,7 +173,7 @@ export class CompleteVercelIntegration {
     }
   }
 
-  private async getEnvKeys(organizationIds: string[]): Promise<EnvironmentEntity[]> {
+  private async getEnvironments(organizationIds: string[]): Promise<EnvironmentEntity[]> {
     return await this.environmentRepository.find(
       {
         _organizationId: { $in: organizationIds },
@@ -158,34 +182,9 @@ export class CompleteVercelIntegration {
     );
   }
 
-  private mapProjectKeys(envData: EnvironmentEntity[], projectData: Record<string, string[]>) {
-    const result: {
-      _organizationId: string;
-      name: string;
-      envId: string;
-      projectIds: string[];
-      privateKey: string;
-      clientKey: string;
-    }[] = [];
-
-    for (const env of envData) {
-      result.push({
-        _organizationId: env._organizationId,
-        name: env.name,
-        envId: env._id,
-        projectIds: projectData[env._organizationId],
-        privateKey: decryptApiKey(env.apiKeys[0].key),
-        clientKey: env.identifier,
-      });
-    }
-
-    return result;
-  }
-
-  private async setEnvironments({
+  private async setEnvironmentVariables({
     name,
-    envId,
-    clientKey,
+    applicationIdentifier,
     projectIds,
     privateKey,
     teamId,
@@ -194,17 +193,17 @@ export class CompleteVercelIntegration {
     const target = name?.toLowerCase() === 'production' ? ['production'] : ['preview', 'development'];
     const type = 'encrypted';
 
-    const apiKeys = [
+    const environmentVariables = [
       {
         target,
         type,
-        value: clientKey,
+        value: applicationIdentifier,
         key: 'NEXT_PUBLIC_NOVU_CLIENT_APP_ID',
       },
       {
         target,
         type,
-        value: clientKey,
+        value: applicationIdentifier,
         key: 'NOVU_CLIENT_APP_ID',
       },
       {
@@ -221,34 +220,27 @@ export class CompleteVercelIntegration {
     };
 
     const getUrl = (projectId: string) => {
-      const projectApiUrl = `${process.env.VERCEL_BASE_URL}/v10/projects`;
-      const baseUrl = `${projectApiUrl}/${projectId}/env`;
-      const teamIdParam = teamId ? `teamId=${teamId}` : '';
+      const baseUrl = `${process.env.VERCEL_BASE_URL}/v10/projects/${projectId}/env`;
+      const queryParams = new URLSearchParams();
+      queryParams.set('upsert', 'true');
 
-      return `${baseUrl}?upsert=true&${teamIdParam}`;
+      if (teamId) {
+        queryParams.set('teamId', teamId);
+      }
+
+      return `${baseUrl}?${queryParams.toString()}`;
     };
 
-    const createEnvVariable = async (projectId: string, apiKey: (typeof apiKeys)[0]) => {
-      return lastValueFrom(this.httpService.post(getUrl(projectId), [apiKey], { headers }));
-    };
-
-    const setEnvVariable = async (projectId: string, apiKey: (typeof apiKeys)[0]) => {
+    const setEnvVariable = async (projectId: string, variable: (typeof environmentVariables)[0]) => {
       try {
-        await createEnvVariable(projectId, apiKey);
+        await lastValueFrom(this.httpService.post(getUrl(projectId), [variable], { headers }));
       } catch (error) {
-        console.error('Error setting environment variable:', error.response?.data?.error || error.response?.data);
-        throw error;
+        throw new ApiException(error.response?.data?.error || error.response?.data);
       }
     };
 
-    await Promise.all(projectIds.flatMap((projectId) => apiKeys.map((apiKey) => setEnvVariable(projectId, apiKey))));
-  }
-
-  private async saveProjectIds(command: CompleteVercelIntegrationCommand) {
-    await this.organizationRepository.bulkUpdatePartnerConfiguration(
-      command.userId,
-      command.data,
-      command.configurationId
+    await Promise.all(
+      projectIds.flatMap((projectId) => environmentVariables.map((variable) => setEnvVariable(projectId, variable)))
     );
   }
 }

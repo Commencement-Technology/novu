@@ -43,6 +43,7 @@ import { initializeSentry } from './utils/sentry';
 import { overrideZodErrorMap } from './utils/validation';
 import { EditSubscriberPage } from './pages/edit-subscriber-page';
 import { CreateSubscriberPage } from './pages/create-subscriber';
+import { VercelIntegrationPage } from './pages/vercel-integration-page';
 
 initializeSentry();
 overrideZodErrorMap();
@@ -208,6 +209,10 @@ const router = createBrowserRouter([
           {
             path: ROUTES.INTEGRATIONS,
             element: <IntegrationsListPage />,
+          },
+          {
+            path: ROUTES.PARTNER_INTEGRATIONS_VERCEL,
+            element: <VercelIntegrationPage />,
           },
           {
             path: ROUTES.SETTINGS,

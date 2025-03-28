@@ -68,10 +68,6 @@ export class PartnerIntegrationsController {
     return this.processVercelWebhookUsecase.execute(
       ProcessVercelWebhookCommand.create({
         body,
-        teamId: body.payload.team.id,
-        projectId: body.payload.project.id,
-        deploymentUrl: body.payload.deployment.url,
-        vercelEnvironment: body.payload.target || 'preview',
         signatureHeader,
       })
     );

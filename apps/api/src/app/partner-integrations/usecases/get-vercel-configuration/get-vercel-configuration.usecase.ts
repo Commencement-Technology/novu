@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { OrganizationRepository } from '@novu/dal';
+
 import { GetVercelConfigurationCommand } from './get-vercel-configuration.command';
 
 @Injectable()
@@ -11,11 +12,10 @@ export class GetVercelConfiguration {
   }
 
   private async getConfigurationDetails(command: GetVercelConfigurationCommand) {
-    const details = await this.organizationRepository.findPartnerConfigurationDetails(
-      command.organizationId,
-      command.userId,
-      command.configurationId
-    );
+    const details = await this.organizationRepository.findPartnerConfigurationDetails({
+      userId: command.userId,
+      configurationId: command.configurationId,
+    });
 
     return details.reduce(
       (acc, curr) => {

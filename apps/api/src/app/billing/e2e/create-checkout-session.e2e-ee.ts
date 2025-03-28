@@ -4,7 +4,7 @@ import { expect } from 'chai';
 
 import { ApiServiceLevelEnum, StripeBillingIntervalEnum } from '@novu/shared';
 
-const dashboardOrigin = 'https://dashboard.novu.co';
+const dashboardOrigin = process.env.FRONT_BASE_URL;
 const checkoutSessionCreateParamsMock = {
   mode: 'subscription',
   customer: 'customer_id',

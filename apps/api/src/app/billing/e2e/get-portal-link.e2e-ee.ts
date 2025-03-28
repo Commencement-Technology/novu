@@ -2,7 +2,7 @@
 import sinon from 'sinon';
 import { expect } from 'chai';
 
-const dashboardOrigin = 'https://dashboard.novu.co';
+const dashboardOrigin = process.env.FRONT_BASE_URL;
 
 describe('Get portal link #novu-v2', async () => {
   it('Get portal link', async () => {

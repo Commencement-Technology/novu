@@ -675,7 +675,7 @@ describe('Workflow Controller E2E API Testing #novu-v2', () => {
       const duplicatedWorkflow = await novuClient.workflows.duplicate(
         {
           name: 'Duplicated Workflow',
-          description: 'some desc',
+          description: '',
         },
         workflowCreated.id
       );

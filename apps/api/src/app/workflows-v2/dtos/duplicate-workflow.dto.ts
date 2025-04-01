@@ -4,9 +4,11 @@ import { IsArray, IsOptional, IsString } from 'class-validator';
 export class DuplicateWorkflowDto {
   @ApiProperty({
     description: 'Name of the workflow',
+    required: false,
   })
+  @IsOptional()
   @IsString()
-  name: string;
+  name?: string;
 
   @ApiPropertyOptional({
     description: 'Tags associated with the workflow',
@@ -18,7 +20,9 @@ export class DuplicateWorkflowDto {
 
   @ApiProperty({
     description: 'Description of the workflow',
+    required: false,
   })
   @IsString()
-  description: string;
+  @IsOptional()
+  description?: string;
 }

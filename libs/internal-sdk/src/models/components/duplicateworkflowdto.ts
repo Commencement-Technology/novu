@@ -11,7 +11,7 @@ export type DuplicateWorkflowDto = {
   /**
    * Name of the workflow
    */
-  name: string;
+  name?: string | undefined;
   /**
    * Tags associated with the workflow
    */
@@ -19,7 +19,7 @@ export type DuplicateWorkflowDto = {
   /**
    * Description of the workflow
    */
-  description: string;
+  description?: string | undefined;
 };
 
 /** @internal */
@@ -28,16 +28,16 @@ export const DuplicateWorkflowDto$inboundSchema: z.ZodType<
   z.ZodTypeDef,
   unknown
 > = z.object({
-  name: z.string(),
+  name: z.string().optional(),
   tags: z.array(z.string()).optional(),
-  description: z.string(),
+  description: z.string().optional(),
 });
 
 /** @internal */
 export type DuplicateWorkflowDto$Outbound = {
-  name: string;
+  name?: string | undefined;
   tags?: Array<string> | undefined;
-  description: string;
+  description?: string | undefined;
 };
 
 /** @internal */
@@ -46,9 +46,9 @@ export const DuplicateWorkflowDto$outboundSchema: z.ZodType<
   z.ZodTypeDef,
   DuplicateWorkflowDto
 > = z.object({
-  name: z.string(),
+  name: z.string().optional(),
   tags: z.array(z.string()).optional(),
-  description: z.string(),
+  description: z.string().optional(),
 });
 
 /**

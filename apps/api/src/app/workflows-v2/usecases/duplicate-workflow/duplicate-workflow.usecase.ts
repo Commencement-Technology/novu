@@ -6,8 +6,13 @@ import { PreferencesEntity, PreferencesRepository } from '@novu/dal';
 import { GetWorkflowCommand, GetWorkflowUseCase } from '../get-workflow';
 import { UpsertWorkflowCommand, UpsertWorkflowDataCommand, UpsertWorkflowUseCase } from '../upsert-workflow';
 import { DuplicateWorkflowCommand } from './duplicate-workflow.command';
-import { StepResponseDto, StepUpsertDto, WorkflowPreferencesDto, WorkflowResponseDto } from '../../dtos';
-import { DuplicateWorkflowDto } from '../../dtos/duplicate-workflow.dto';
+import {
+  DuplicateWorkflowDto,
+  StepResponseDto,
+  StepUpsertDto,
+  WorkflowPreferencesDto,
+  WorkflowResponseDto,
+} from '../../dtos';
 
 @Injectable()
 export class DuplicateWorkflowUseCase {

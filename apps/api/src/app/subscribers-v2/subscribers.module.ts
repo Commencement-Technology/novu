@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import {
+  CommunityOrganizationRepository,
+  EnvironmentRepository,
   IntegrationRepository,
   MessageTemplateRepository,
   NotificationTemplateRepository,
@@ -14,8 +16,7 @@ import {
   CacheInMemoryProviderService,
   cacheService,
   CreateOrUpdateSubscriberUseCase,
-  DistributedLockService,
-  EventsDistributedLockService,
+  featureFlagsService,
   GetPreferences,
   GetSubscriberTemplatePreference,
   InvalidateCacheService,
@@ -33,23 +34,18 @@ import { UpdateSubscriberPreferences } from './usecases/update-subscriber-prefer
 import { UpdatePreferences } from '../inbox/usecases/update-preferences/update-preferences.usecase';
 import { GetSubscriberGlobalPreference } from '../subscribers/usecases/get-subscriber-global-preference';
 import { GetSubscriberPreference } from '../subscribers/usecases/get-subscriber-preference';
-import { CreateSubscriber } from './usecases/create-subscriber/create-subscriber.usecase';
 
 const USE_CASES = [
   ListSubscribersUseCase,
   CreateOrUpdateSubscriberUseCase,
   UpdateSubscriber,
   UpdateSubscriberChannel,
-  EventsDistributedLockService,
   IntegrationRepository,
-  DistributedLockService,
   CacheInMemoryProviderService,
   CreateOrUpdateSubscriberUseCase,
   UpdateSubscriber,
   UpdateSubscriberChannel,
-  EventsDistributedLockService,
   IntegrationRepository,
-  DistributedLockService,
   CacheInMemoryProviderService,
   GetSubscriber,
   PatchSubscriber,
@@ -62,7 +58,6 @@ const USE_CASES = [
   UpdatePreferences,
   GetSubscriberTemplatePreference,
   UpsertPreferences,
-  CreateSubscriber,
 ];
 
 const DAL_MODELS = [
@@ -77,6 +72,15 @@ const DAL_MODELS = [
 
 @Module({
   controllers: [SubscribersController],
-  providers: [...USE_CASES, ...DAL_MODELS, cacheService, InvalidateCacheService, analyticsService],
+  providers: [
+    ...USE_CASES,
+    ...DAL_MODELS,
+    cacheService,
+    InvalidateCacheService,
+    analyticsService,
+    CommunityOrganizationRepository,
+    featureFlagsService,
+    EnvironmentRepository,
+  ],
 })
 export class SubscribersModule {}

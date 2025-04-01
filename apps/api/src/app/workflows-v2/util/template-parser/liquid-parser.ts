@@ -8,6 +8,16 @@ const LIQUID_CONFIG = {
   catchAllErrors: true,
 } as const;
 
+export const buildLiquidParser = () => {
+  const parserEngine = new Liquid(LIQUID_CONFIG);
+  // Register digest filter for validation of digest transformers
+  parserEngine.registerFilter('digest', () => '');
+
+  return parserEngine;
+};
+
+const parserEngine = buildLiquidParser();
+
 export type Variable = {
   /**
    * The variable name/path (e.g. for valid variables "user.name",
@@ -123,11 +133,6 @@ function processLiquidRawOutput(rawOutputs: string[]): TemplateVariables {
 }
 
 function parseByLiquid(rawOutput: string): TemplateVariables {
-  const parserEngine = new Liquid(LIQUID_CONFIG);
-
-  // Register digest filter for validation of digest transformers
-  parserEngine.registerFilter('digest', () => '');
-
   const validVariables: Variable[] = [];
   const invalidVariables: Variable[] = [];
   const parsed = parserEngine.parse(rawOutput) as unknown as Template[];
@@ -169,7 +174,7 @@ function extractProps(template: any): { valid: boolean; props: string[]; error?:
     return {
       valid: false,
       props: [],
-      error: `contains whitespaces. Variables must follow the dot notation (e.g. payload.something)`,
+      error: `contains whitespaces`,
     };
   }
 
@@ -191,7 +196,7 @@ function extractProps(template: any): { valid: boolean; props: string[]; error?:
     return {
       valid: false,
       props: [],
-      error: `missing namespace. Variables must follow the dot notation (e.g. payload.${validProps[0] === 'payload' ? 'something' : validProps[0]})`,
+      error: `missing namespace. Did you mean {{payload.${validProps[0] === 'payload' ? 'someKey' : validProps[0]}}}?`,
     };
   }
 

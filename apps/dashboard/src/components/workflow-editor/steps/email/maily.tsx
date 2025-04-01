@@ -7,11 +7,9 @@ import { HTMLAttributes, useCallback, useMemo, useState } from 'react';
 import { HTMLCodeBlockView } from '@/components/workflow-editor/steps/email/extensions/html-view';
 import { MailyVariablesList } from '@/components/workflow-editor/steps/email/extensions/maily-variables-list';
 import { useWorkflow } from '@/components/workflow-editor/workflow-provider';
-import { useFeatureFlag } from '@/hooks/use-feature-flag';
 import { useTelemetry } from '@/hooks/use-telemetry';
 import { parseStepVariables } from '@/utils/parseStepVariablesToLiquidVariables';
 import { cn } from '@/utils/ui';
-import { FeatureFlagsKeysEnum } from '@novu/shared';
 import { ForExtension } from './extensions/for';
 import { VariableView } from './extensions/variable-view';
 import { createDefaultEditorBlocks, DEFAULT_EDITOR_CONFIG } from './maily-config';
@@ -51,7 +49,6 @@ export const Maily = ({ value, onChange, className, ...rest }: MailyProps) => {
     [mailyVariables.namespaces]
   );
   const [_, setEditor] = useState<any>();
-  const isCustomEmailBlocksEnabled = useFeatureFlag(FeatureFlagsKeysEnum.IS_CUSTOM_EMAIL_BLOCKS_ENABLED);
   const track = useTelemetry();
 
   const calculateVariables = useCallback(
@@ -167,6 +164,7 @@ export const Maily = ({ value, onChange, className, ...rest }: MailyProps) => {
               border-radius: 4px;
               box-shadow: 0px 0px 2px 0px rgba(0, 0, 0, 0.04), 0px 1px 2px 0px rgba(0, 0, 0, 0.02);
               border-radius: 4px;
+              margin: 2px;
             }
           }
         `}
@@ -178,7 +176,7 @@ export const Maily = ({ value, onChange, className, ...rest }: MailyProps) => {
       {overrideTippyBoxStyles()}
       <div
         className={cn(
-          `shadow-xs mx-auto flex h-full max-w-[${MAILY_EMAIL_WIDTH}px] flex-col items-start rounded-lg bg-white`,
+          `shadow-xs mx-auto flex min-h-full max-w-[${MAILY_EMAIL_WIDTH}px] flex-col items-start rounded-lg bg-white`,
           className
         )}
         {...rest}
@@ -186,7 +184,7 @@ export const Maily = ({ value, onChange, className, ...rest }: MailyProps) => {
         <Editor
           key="repeat-block-enabled"
           config={DEFAULT_EDITOR_CONFIG}
-          blocks={createDefaultEditorBlocks({ track, isCustomEmailBlocksEnabled })}
+          blocks={createDefaultEditorBlocks({ track })}
           // @ts-expect-error - TODO: Polish Maily typing when extending Maily core and update accordingly
           extensions={extensions}
           contentJson={value ? JSON.parse(value) : undefined}

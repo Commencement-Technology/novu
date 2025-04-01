@@ -35,7 +35,7 @@ WORKDIR /usr/src/app
 RUN rm -rf node_modules && pnpm recursive exec -- rm -rf ./src ./node_modules
 
 # ------- PRODUCTION BUILD ----------
-FROM dev_base AS prod
+FROM ghcr.io/novuhq/novu/base:1.0.0 AS prod
 
 ARG PACKAGE_PATH
 

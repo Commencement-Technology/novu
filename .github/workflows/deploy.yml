@@ -90,7 +90,7 @@ jobs:
     needs: prepare-matrix
     timeout-minutes: 60
     runs-on: ubuntu-latest
-    environment: ${{ fromJson(needs.prepare-matrix.outputs.env_matrix).environment }}
+    environment: ${{ fromJson(needs.prepare-matrix.outputs.env_matrix).environment[0] }}
     outputs:
       docker_image: ${{ steps.build-image.outputs.IMAGE }}
     strategy:

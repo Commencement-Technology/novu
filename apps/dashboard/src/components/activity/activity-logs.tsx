@@ -173,12 +173,12 @@ export function ActivityLogs({
                 </PopoverClose>
               </div>
             </div>
-            <div className="max-h-[400px] overflow-auto p-3">
+            <div className="flex flex-col p-3">
               <CodeBlock
                 code={formattedPayload}
                 language="json"
                 theme="light"
-                className="h-full"
+                className="h-[400px]"
                 actionButtons={
                   <ActionButtons formattedPayload={formattedPayload} setIsFullscreenOpen={setIsFullscreenOpen} />
                 }
@@ -214,8 +214,8 @@ export function ActivityLogs({
       </motion.div>
 
       <Dialog open={isFullscreenOpen} onOpenChange={setIsFullscreenOpen}>
-        <DialogContent className="flex h-[90%] max-h-[90vh] w-[90%] max-w-[90%] flex-col p-0 md:max-w-[80%] lg:max-w-[70%] [&>button.absolute.right-4.top-4]:hidden">
-          <DialogHeader className="border-b border-neutral-100 p-3">
+        <DialogContent className="flex max-h-[90vh] w-[90%] flex-col overflow-hidden p-0 [&>button.absolute.right-4.top-4]:hidden">
+          <DialogHeader className="flex-none border-b border-neutral-100 p-3">
             <div className="flex items-center justify-between">
               <DialogTitle className="text-foreground-950 text-sm font-medium">Request payload</DialogTitle>
               <div className="flex items-center gap-2">

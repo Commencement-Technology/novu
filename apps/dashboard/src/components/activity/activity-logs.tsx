@@ -1,8 +1,8 @@
 import { motion } from 'motion/react';
-import { RiPlayCircleLine, RiFullscreenLine, RiCloseLine, RiCodeBlock } from 'react-icons/ri';
+import { RiPlayCircleLine, RiFullscreenLine, RiCodeBlock, RiCloseFill } from 'react-icons/ri';
 import { IActivity, IEnvironment } from '@novu/shared';
-import { useState, useRef, useCallback } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useState, useRef } from 'react';
+import { useQueryClient, useMutation } from '@tanstack/react-query';
 
 import { cn } from '@/utils/ui';
 import { InlineToast } from '@/components/primitives/inline-toast';
@@ -13,15 +13,13 @@ import { CodeBlock } from '@/components/primitives/code-block';
 import { Dialog, DialogContent, DialogTitle, DialogClose, DialogHeader } from '@/components/primitives/dialog';
 import { CopyToClipboard } from '../primitives/copy-to-clipboard';
 import { Button } from '@/components/primitives/button';
-import { ToastClose } from '../primitives/sonner';
-import { showToast } from '../primitives/sonner-helpers';
 import { toast } from 'sonner';
 import { triggerWorkflow } from '../../api/workflows';
-import { ToastIcon } from '../primitives/sonner';
 import { QueryKeys } from '@/utils/query-keys';
 import { getActivityList } from '@/api/activity';
 import { useEnvironment } from '@/context/environment/hooks';
 import { RepeatPlay } from '../icons/repeat-play';
+import { CompactButton } from '../primitives/button-compact';
 
 export function ActivityLogs({
   activity,
@@ -41,9 +39,9 @@ export function ActivityLogs({
   const [isFullscreenOpen, setIsFullscreenOpenState] = useState(false);
   const popoverCloseRef = useRef<HTMLButtonElement>(null);
   const queryClient = useQueryClient();
-  const [isResending, setIsResending] = useState(false);
   const { currentEnvironment } = useEnvironment();
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  const workflowDeletedExist = !!activity?.template;
 
   const resentMetadata = {
     __resent_transaction_id: activity.transactionId,
@@ -52,26 +50,24 @@ export function ActivityLogs({
   const resentPayload = payload ? { ...payload, ...resentMetadata } : resentMetadata;
   const formattedPayload = payload ? JSON.stringify(payload, null, 2) : '{}';
 
-  const setIsFullscreenOpen = useCallback((isOpen: boolean) => {
+  const setIsFullscreenOpen = (isOpen: boolean) => {
     if (isOpen && popoverCloseRef.current) {
       popoverCloseRef.current.click();
     }
 
     setIsFullscreenOpenState(isOpen);
-  }, []);
+  };
 
-  const closePopover = useCallback(() => {
+  const closePopover = () => {
     if (popoverCloseRef.current) {
       popoverCloseRef.current.click();
     }
 
     setIsPopoverOpen(false);
-  }, []);
+  };
 
-  const handleResend = useCallback(async () => {
-    try {
-      setIsResending(true);
-
+  const { mutate: handleResend, isPending } = useMutation({
+    mutationFn: async () => {
       const {
         data: { transactionId: newTransactionId },
       } = await triggerWorkflow({
@@ -81,30 +77,15 @@ export function ActivityLogs({
         environment: { _id: activity._environmentId } as IEnvironment,
       });
 
-      setIsResending(false);
-
       if (!newTransactionId) {
-        return showToast({
-          variant: 'lg',
-          children: ({ close }) => (
-            <>
-              <ToastIcon variant="error" />
-              <div className="flex flex-col gap-2">
-                <span className="font-medium">Test workflow failed</span>
-                <span className="text-foreground-600 inline">
-                  Workflow <span className="font-bold">{activity.template?.name}</span> cannot be triggered. Ensure that
-                  it is active and requires not further actions.
-                </span>
-              </div>
-              <ToastClose onClick={close} />
-            </>
-          ),
-          options: {
-            position: 'bottom-right',
-          },
-        });
+        throw new Error(
+          `Workflow ${activity.template?.name} cannot be triggered. Ensure that it is active and requires not further actions`
+        );
       }
 
+      return newTransactionId;
+    },
+    onSuccess: async (newTransactionId) => {
       closePopover();
       setIsFullscreenOpen(false);
 
@@ -128,27 +109,18 @@ export function ActivityLogs({
               queryKey: [QueryKeys.fetchActivities, activity._environmentId],
             });
             onTransactionIdChange?.(newTransactionId, activities[0]._id);
-            return;
           }
         }
       };
 
       setTimeout(checkAndUpdateTransaction, 1000);
-    } catch (e) {
-      setIsResending(false);
+    },
+    onError: (error: Error) => {
       toast.error('Failed to trigger resend workflow', {
-        description: e instanceof Error ? e.message : 'There was an error triggering the resend workflow.',
+        description: error.message || 'There was an error triggering the resend workflow.',
       });
-    }
-  }, [
-    activity,
-    currentEnvironment,
-    resentPayload,
-    queryClient,
-    onTransactionIdChange,
-    setIsFullscreenOpen,
-    closePopover,
-  ]);
+    },
+  });
 
   return (
     <>
@@ -161,65 +133,59 @@ export function ActivityLogs({
           <span className="text-foreground-950 text-sm font-medium">Logs</span>
         </div>
 
-        {payload && (
-          <Popover open={isPopoverOpen} onOpenChange={(open) => setIsPopoverOpen(open)}>
-            <PopoverTrigger asChild>
-              <div className="flex items-center gap-1">
-                <RiCodeBlock className="size-3" />
-                <button
-                  className="text-foreground-600 hover:text-foreground-950 text-xs underline transition-colors"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setIsPopoverOpen(true);
-                  }}
+        <Popover open={isPopoverOpen} onOpenChange={(open) => setIsPopoverOpen(open)}>
+          <PopoverTrigger asChild>
+            <div className="flex items-center gap-1">
+              <RiCodeBlock className="size-3" />
+              <button
+                className="text-foreground-600 hover:text-foreground-950 text-xs underline transition-colors"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setIsPopoverOpen(true);
+                }}
+              >
+                View request payload
+              </button>
+            </div>
+          </PopoverTrigger>
+          <PopoverContent className="w-[400px] p-0" align="center" side="left">
+            <div className="flex items-center justify-between border-b border-neutral-100 p-3">
+              <h3 className="text-foreground-950 text-sm font-medium">Request payload</h3>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="secondary"
+                  mode="ghost"
+                  size="sm"
+                  onClick={() => handleResend()}
+                  className="text-xs"
+                  disabled={isPending || !workflowDeletedExist}
+                  type="button"
                 >
-                  View request payload
-                </button>
+                  <RepeatPlay
+                    className={cn('size-3', isPending || (!workflowDeletedExist && 'text-text-disabled opacity-50'))}
+                  />
+                  Resend
+                </Button>
+                <PopoverClose asChild ref={popoverCloseRef}>
+                  <CompactButton size="md" variant="ghost" icon={RiCloseFill} type="button">
+                    <span className="sr-only">Close</span>
+                  </CompactButton>
+                </PopoverClose>
               </div>
-            </PopoverTrigger>
-            <PopoverContent className="w-[400px] p-0" align="center" side="left">
-              <div className="flex items-center justify-between border-b border-neutral-100 p-3">
-                <h3 className="text-foreground-950 text-sm font-medium">Request payload</h3>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="secondary"
-                    mode="ghost"
-                    size="sm"
-                    onClick={handleResend}
-                    className="text-xs"
-                    disabled={isResending}
-                    type="button"
-                  >
-                    <RepeatPlay className={cn('size-3', isResending && 'text-text-disabled opacity-50')} />
-                    Resend
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    mode="ghost"
-                    size="sm"
-                    className="text-xs"
-                    onClick={closePopover}
-                    type="button"
-                  >
-                    <RiCloseLine className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-              <div className="max-h-[400px] overflow-auto p-3">
-                <CodeBlock
-                  code={formattedPayload}
-                  language="json"
-                  theme="light"
-                  className="h-full"
-                  actionButtons={
-                    <ActionButtons formattedPayload={formattedPayload} setIsFullscreenOpen={setIsFullscreenOpen} />
-                  }
-                />
-              </div>
-              <PopoverClose ref={popoverCloseRef} className="hidden" />
-            </PopoverContent>
-          </Popover>
-        )}
+            </div>
+            <div className="max-h-[400px] overflow-auto p-3">
+              <CodeBlock
+                code={formattedPayload}
+                language="json"
+                theme="light"
+                className="h-full"
+                actionButtons={
+                  <ActionButtons formattedPayload={formattedPayload} setIsFullscreenOpen={setIsFullscreenOpen} />
+                }
+              />
+            </div>
+          </PopoverContent>
+        </Popover>
       </motion.div>
 
       {isMerged && (
@@ -256,19 +222,19 @@ export function ActivityLogs({
                 <Button
                   variant="secondary"
                   mode="ghost"
-                  size="sm"
-                  onClick={handleResend}
+                  size="xs"
+                  onClick={() => handleResend()}
                   className="text-xs"
-                  disabled={isResending}
+                  disabled={isPending}
                   type="button"
                 >
-                  <RepeatPlay className={cn('size-3', isResending && 'text-text-disabled opacity-50')} />
+                  <RepeatPlay className={cn('size-3', isPending && 'text-text-disabled opacity-50')} />
                   Resend
                 </Button>
                 <DialogClose asChild>
-                  <Button variant="secondary" mode="ghost" size="sm" className="text-xs" type="button">
-                    <RiCloseLine className="h-4 w-4" />
-                  </Button>
+                  <CompactButton size="md" variant="ghost" icon={RiCloseFill} type="button">
+                    <span className="sr-only">Close</span>
+                  </CompactButton>
                 </DialogClose>
               </div>
             </div>

@@ -26,7 +26,6 @@ export const TestWorkflowLogsSidebar = (props: TestWorkflowLogsSidebarProps) => 
   const [parentActivityId, setParentActivityId] = useState<string | undefined>(undefined);
   const [shouldRefetch, setShouldRefetch] = useState(true);
   const [showInstructions, setShowInstructions] = useState(false);
-  const [isTransactionChanging, setIsTransactionChanging] = useState(false);
   const to = useWatch({ name: 'to', control });
   const payload = useWatch({ name: 'payload', control });
   const [transactionId, setTransactionId] = useState<string | undefined>(props.transactionId);
@@ -58,16 +57,9 @@ export const TestWorkflowLogsSidebar = (props: TestWorkflowLogsSidebarProps) => 
   }, [activityId]);
 
   const handleTransactionIdChange = useCallback((newTransactionId: string) => {
-    setIsTransactionChanging(true);
     setTransactionId(newTransactionId);
     setParentActivityId(undefined);
   }, []);
-
-  useEffect(() => {
-    if (activity) {
-      setIsTransactionChanging(false);
-    }
-  }, [activity]);
 
   useEffect(() => {
     if (!props.transactionId) {
@@ -83,7 +75,7 @@ export const TestWorkflowLogsSidebar = (props: TestWorkflowLogsSidebarProps) => 
       {transactionId ? (
         <>
           <ActivityPanel>
-            {isPending || isTransactionChanging ? (
+            {isPending ? (
               <ActivitySkeleton />
             ) : error || !activity ? (
               <ActivityError />

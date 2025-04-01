@@ -5,10 +5,10 @@ import { X } from 'lucide-react';
 import { Code2 } from '@/components/icons/code-2';
 import { FormField, FormItem, FormLabel, FormMessage } from '@/components/primitives/form/form';
 import { useWorkflow } from '@/components/workflow-editor/workflow-provider';
-import { parseStepVariablesToLiquidVariables } from '@/utils/parseStepVariablesToLiquidVariables';
 import { VariableSelect } from '../../../conditions-editor/variable-select';
 import { useSaveForm } from '@/components/workflow-editor/steps/save-form-context';
 import { Button } from '@/components/primitives/button';
+import { useParseVariables } from '../../../../hooks/use-parse-variables';
 
 function parseLiquidVariables(value: string | undefined): string {
   const matches = value?.match(/{{(.*?)}}/g) || [];
@@ -19,14 +19,10 @@ const FORM_CONTROL_NAME = 'controlValues.digestKey';
 
 export const DigestKey = () => {
   const { step } = useWorkflow();
-  const variables = useMemo(
-    () =>
-      step
-        ? parseStepVariablesToLiquidVariables(step.variables).filter((variable) =>
-            variable.label.startsWith('payload.')
-          )
-        : [],
-    [step]
+  const { variables } = useParseVariables(step?.variables);
+  const payloadVariables = useMemo(
+    () => variables.filter((variable) => variable.label.startsWith('payload.')),
+    [variables]
   );
   const form = useFormContext();
   const { control, setValue } = form;
@@ -56,7 +52,7 @@ export const DigestKey = () => {
                     saveForm();
                   }
                 }}
-                options={variables.map((variable) => ({
+                options={payloadVariables.map((variable) => ({
                   label: variable.label,
                   value: variable.label,
                 }))}

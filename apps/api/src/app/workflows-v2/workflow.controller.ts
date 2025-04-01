@@ -212,7 +212,7 @@ export class WorkflowController {
   @Post(':workflowId/duplicate')
   @ApiOperation({ summary: 'Duplicate a workflow' }) // Summary for the endpoint
   @ApiBody({ type: DuplicateWorkflowDto }) // Documenting the request body
-  @ApiResponse(WorkflowResponseDto)
+  @ApiResponse(WorkflowResponseDto, 201)
   @SdkMethodName('duplicate')
   async duplicateWorkflow(
     @UserSession(ParseSlugEnvironmentIdPipe) user: UserSessionData,

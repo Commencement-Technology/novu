@@ -211,7 +211,7 @@ async function $do(
     | ConnectionError
   >(
     M.json(
-      200,
+      201,
       operations.WorkflowControllerDuplicateWorkflowResponse$inboundSchema,
       { hdrs: true, key: "Result" },
     ),

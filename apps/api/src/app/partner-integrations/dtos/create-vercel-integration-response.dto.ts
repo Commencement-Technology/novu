@@ -1,6 +1,6 @@
 import { IsDefined } from 'class-validator';
 
-export class SetupVercelConfigurationResponseDto {
+export class CreateVercelIntegrationResponseDto {
   @IsDefined()
   success: boolean;
 }

@@ -77,7 +77,7 @@ export class CommunityOrganizationRepository
     );
   }
 
-  async findPartnerConfigurationDetails({ userId, configurationId }: { userId: string; configurationId: string }) {
+  async findByPartnerConfigurationId({ userId, configurationId }: { userId: string; configurationId: string }) {
     const organizationIds = await this.getUsersMembersOrganizationIds(userId);
 
     return await this.find(

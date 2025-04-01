@@ -25,7 +25,7 @@ export interface IOrganizationRepository extends IOrganizationRepositoryMongo {
     matched: number;
     modified: number;
   }>;
-  findPartnerConfigurationDetails(args: { userId: string; configurationId: string }): Promise<OrganizationEntity[]>;
+  findByPartnerConfigurationId(args: { userId: string; configurationId: string }): Promise<OrganizationEntity[]>;
   upsertPartnerConfiguration(args: { organizationId: string; configuration: IPartnerConfiguration }): Promise<{
     matched: number;
     modified: number;

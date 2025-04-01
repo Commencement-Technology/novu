@@ -1,6 +1,6 @@
 import { IsDefined, IsString } from 'class-validator';
 
-export class SetVercelConfigurationRequestDto {
+export class CreateVercelIntegrationRequestDto {
   @IsDefined()
   @IsString()
   vercelIntegrationCode: string;

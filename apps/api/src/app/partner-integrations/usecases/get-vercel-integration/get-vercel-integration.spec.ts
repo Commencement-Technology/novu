@@ -4,16 +4,16 @@ import { stub, restore, assert } from 'sinon';
 import { OrganizationRepository } from '@novu/dal';
 import { UserSession } from '@novu/testing';
 
-import { GetVercelConfiguration } from './get-vercel-configuration.usecase';
+import { GetVercelIntegration } from './get-vercel-integration.usecase';
 
-describe('GetVercelConfiguration', function () {
-  let getVercelConfiguration: GetVercelConfiguration;
+describe('GetVercelIntegration', function () {
+  let getVercelIntegration: GetVercelIntegration;
   let session: UserSession;
   let organizationRepositoryMock;
 
   beforeEach(async () => {
     organizationRepositoryMock = {
-      findPartnerConfigurationDetails: stub().resolves([
+      findByPartnerConfigurationId: stub().resolves([
         {
           _id: 'org-id-1',
           partnerConfigurations: [
@@ -35,7 +35,7 @@ describe('GetVercelConfiguration', function () {
 
     const moduleRef = await Test.createTestingModule({
       providers: [
-        GetVercelConfiguration,
+        GetVercelIntegration,
         {
           provide: OrganizationRepository,
           useValue: organizationRepositoryMock,
@@ -45,7 +45,7 @@ describe('GetVercelConfiguration', function () {
 
     session = new UserSession();
     await session.initialize();
-    getVercelConfiguration = moduleRef.get<GetVercelConfiguration>(GetVercelConfiguration);
+    getVercelIntegration = moduleRef.get<GetVercelIntegration>(GetVercelIntegration);
   });
 
   afterEach(() => {
@@ -60,7 +60,7 @@ describe('GetVercelConfiguration', function () {
       configurationId: 'test-config-id',
     };
 
-    const result = await getVercelConfiguration.execute(command);
+    const result = await getVercelIntegration.execute(command);
 
     expect(result).to.be.an('array');
     expect(result[0]).to.deep.equal({
@@ -72,14 +72,14 @@ describe('GetVercelConfiguration', function () {
       projectIds: ['project-2', 'project-3'],
     });
 
-    assert.calledOnceWithExactly(organizationRepositoryMock.findPartnerConfigurationDetails, {
+    assert.calledOnceWithExactly(organizationRepositoryMock.findByPartnerConfigurationId, {
       userId: command.userId,
       configurationId: command.configurationId,
     });
   });
 
   it('should return empty array when no configurations found', async function () {
-    organizationRepositoryMock.findPartnerConfigurationDetails.resolves([]);
+    organizationRepositoryMock.findByPartnerConfigurationId.resolves([]);
 
     const command = {
       userId: session.user._id,
@@ -88,12 +88,12 @@ describe('GetVercelConfiguration', function () {
       configurationId: 'test-config-id',
     };
 
-    const result = await getVercelConfiguration.execute(command);
+    const result = await getVercelIntegration.execute(command);
 
     expect(result).to.be.an('array');
     expect(result).to.have.length(0);
 
-    assert.calledOnceWithExactly(organizationRepositoryMock.findPartnerConfigurationDetails, {
+    assert.calledOnceWithExactly(organizationRepositoryMock.findByPartnerConfigurationId, {
       userId: command.userId,
       configurationId: command.configurationId,
     });

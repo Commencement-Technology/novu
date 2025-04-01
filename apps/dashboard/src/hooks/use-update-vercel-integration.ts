@@ -4,7 +4,7 @@ import { updateVercelIntegration } from '@/api/partner-integrations';
 import { showErrorToast, showSuccessToast } from '@/components/primitives/sonner-helpers';
 import { useEnvironment } from '@/context/environment/hooks';
 
-export const useUpdateVercelIntegration = () => {
+export const useUpdateVercelIntegration = ({ next }: { next?: string | null }) => {
   const { currentEnvironment } = useEnvironment();
 
   return useMutation({
@@ -12,6 +12,10 @@ export const useUpdateVercelIntegration = () => {
       updateVercelIntegration({ data, configurationId, environment: currentEnvironment }),
     onSuccess: () => {
       showSuccessToast('Vercel integration updated successfully');
+
+      if (next) {
+        window.location.replace(next);
+      }
     },
     onError: (err: any) => {
       if (err?.message) {

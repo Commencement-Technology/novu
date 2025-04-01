@@ -1,9 +1,9 @@
 import { useQuery, UseQueryOptions } from '@tanstack/react-query';
 
-import { getVercelConfigurationDetails, GetVercelConfigurationDetails } from '@/api/partner-integrations';
+import { fetchVercelIntegration, GetVercelConfigurationDetails } from '@/api/partner-integrations';
 import { useEnvironment } from '@/context/environment/hooks';
 
-export function useVercelIntegrationDetails({
+export function useFetchVercelIntegration({
   configurationId,
   options,
 }: {
@@ -15,7 +15,7 @@ export function useVercelIntegrationDetails({
   return useQuery({
     queryKey: ['configurationDetails', configurationId],
     queryFn: async () => {
-      const response = await getVercelConfigurationDetails({ configurationId, environment: currentEnvironment });
+      const response = await fetchVercelIntegration({ configurationId, environment: currentEnvironment });
 
       return response.data;
     },

@@ -5,16 +5,17 @@ import { stub, restore, assert, match } from 'sinon';
 import { OrganizationRepository, PartnerTypeEnum } from '@novu/dal';
 import { UserSession } from '@novu/testing';
 import { of } from 'rxjs';
+import { AnalyticsService } from '@novu/application-generic';
 
-import { SetVercelConfiguration } from './set-vercel-configuration.usecase';
+import { CreateVercelIntegration } from './create-vercel-integration.usecase';
 import { ApiException } from '../../../shared/exceptions/api.exception';
 
-describe('SetVercelConfiguration', function () {
-  let setVercelConfiguration: SetVercelConfiguration;
+describe('CreateVercelIntegration', function () {
+  let createVercelIntegration: CreateVercelIntegration;
   let session: UserSession;
   let httpServiceMock;
   let organizationRepositoryMock;
-
+  let analyticsServiceMock;
   beforeEach(async () => {
     httpServiceMock = {
       post: stub().returns(
@@ -31,9 +32,13 @@ describe('SetVercelConfiguration', function () {
       upsertPartnerConfiguration: stub().resolves(true),
     };
 
+    analyticsServiceMock = {
+      track: stub().resolves(),
+    };
+
     const moduleRef = await Test.createTestingModule({
       providers: [
-        SetVercelConfiguration,
+        CreateVercelIntegration,
         {
           provide: HttpService,
           useValue: httpServiceMock,
@@ -42,12 +47,13 @@ describe('SetVercelConfiguration', function () {
           provide: OrganizationRepository,
           useValue: organizationRepositoryMock,
         },
+        { provide: AnalyticsService, useValue: analyticsServiceMock },
       ],
     }).compile();
 
     session = new UserSession();
     await session.initialize();
-    setVercelConfiguration = moduleRef.get<SetVercelConfiguration>(SetVercelConfiguration);
+    createVercelIntegration = moduleRef.get<CreateVercelIntegration>(CreateVercelIntegration);
 
     // @ts-ignore
     process.env.VERCEL_CLIENT_ID = 'test-client-id';
@@ -72,7 +78,7 @@ describe('SetVercelConfiguration', function () {
       environmentId: session.environment._id,
     };
 
-    const result = await setVercelConfiguration.execute(command);
+    const result = await createVercelIntegration.execute(command);
 
     expect(result.success).to.equal(true);
 
@@ -106,13 +112,20 @@ describe('SetVercelConfiguration', function () {
         partnerType: PartnerTypeEnum.VERCEL,
       },
     });
+
+    assert.calledWith(
+      analyticsServiceMock.track,
+      'Create Vercel Integration - [Partner Integrations]',
+      command.userId,
+      { _organization: command.organizationId }
+    );
   });
 
   it('should throw ApiException when Vercel returns an error', async function () {
     httpServiceMock.post.throws(new Error('Vercel error'));
 
     try {
-      await setVercelConfiguration.execute({
+      await createVercelIntegration.execute({
         userId: session.user._id,
         organizationId: session.organization._id,
         environmentId: session.environment._id,

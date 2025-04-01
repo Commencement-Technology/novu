@@ -3,25 +3,28 @@ import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/
 import { lastValueFrom } from 'rxjs';
 import { OrganizationRepository } from '@novu/dal';
 
-import { GetVercelProjectsCommand } from './get-vercel-projects.command';
+import { GetVercelIntegrationProjectsCommand } from './get-vercel-integration-projects.command';
 import { ApiException } from '../../../shared/exceptions/api.exception';
 
 @Injectable()
-export class GetVercelProjects {
+export class GetVercelIntegrationProjects {
   constructor(
     private httpService: HttpService,
     private organizationRepository: OrganizationRepository
   ) {}
 
-  async execute(command: GetVercelProjectsCommand) {
+  async execute(command: GetVercelIntegrationProjectsCommand) {
     try {
-      const configuration = await this.findPartnerConfigurationDetail({
-        organizationId: command.organizationId,
+      const configuration = await this.getCurrentOrgPartnerConfiguration({
+        userId: command.userId,
         configurationId: command.configurationId,
       });
 
       if (!configuration || !configuration.accessToken) {
-        throw new UnauthorizedException();
+        throw new ApiException({
+          message: 'No partner configuration found.',
+          type: 'vercel',
+        });
       }
 
       const projects = await this.getVercelProjects(configuration.accessToken, configuration.teamId, command.nextPage);
@@ -32,26 +35,26 @@ export class GetVercelProjects {
     }
   }
 
-  async findPartnerConfigurationDetail({
-    organizationId,
-    configurationId,
-  }: {
-    organizationId: string;
-    configurationId: string;
-  }) {
-    const organization = await this.organizationRepository.findOne(
-      {
-        _id: organizationId,
-        'partnerConfigurations.configurationId': configurationId,
-      },
-      { 'partnerConfigurations.$': 1 }
-    );
+  async getCurrentOrgPartnerConfiguration({ userId, configurationId }: { userId: string; configurationId: string }) {
+    const orgsWithIntegration = await this.organizationRepository.findByPartnerConfigurationId({
+      userId,
+      configurationId,
+    });
 
-    const configuration = organization?.partnerConfigurations?.find(
-      (config) => config.configurationId === configurationId
-    );
-    if (!organization || !organization.partnerConfigurations?.length || !configuration) {
-      throw new BadRequestException('No configuration found for vercel');
+    if (orgsWithIntegration.length === 0) {
+      throw new ApiException({
+        message: 'No partner configuration found.',
+        type: 'vercel',
+      });
+    }
+
+    const firstOrg = orgsWithIntegration[0];
+    const configuration = firstOrg.partnerConfigurations?.find((config) => config.configurationId === configurationId);
+    if (!firstOrg.partnerConfigurations?.length || !configuration) {
+      throw new ApiException({
+        message: 'No partner configuration found',
+        type: 'vercel',
+      });
     }
 
     return configuration;

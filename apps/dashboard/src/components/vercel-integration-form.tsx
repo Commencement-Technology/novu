@@ -8,7 +8,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/primitives/button';
 import { Delete } from './icons/delete';
 import { MultiSelect } from './primitives/multi-select';
-import { useCreateVercelIntegration } from '@/hooks/use-create-vercel-integration';
 import { useUpdateVercelIntegration } from '@/hooks/use-update-vercel-integration';
 
 export type ProjectLinkFormValues = {
@@ -25,7 +24,6 @@ export const VercelIntegrationForm = ({
   organizations,
   projects,
   configurationId,
-  isEditMode,
   next,
   currentOrganizationId,
 }: {
@@ -33,7 +31,6 @@ export const VercelIntegrationForm = ({
   organizations: Option[];
   projects: Option[];
   configurationId: string | null;
-  isEditMode: boolean;
   next: string | null;
   currentOrganizationId: string;
 }) => {
@@ -53,8 +50,9 @@ export const VercelIntegrationForm = ({
     name: 'projectLinkState',
   });
 
-  const { mutate: completeIntegration, isPending: isCompleteIntegrationPending } = useCreateVercelIntegration({ next });
-  const { mutate: updateIntegration, isPending: isUpdateIntegrationPending } = useUpdateVercelIntegration();
+  const { mutate: updateVercelIntegration, isPending: isUpdateVercelIntegrationPending } = useUpdateVercelIntegration({
+    next,
+  });
 
   const onSubmit = (data: ProjectLinkFormValues) => {
     const payload = data.projectLinkState.reduce<Record<string, string[]>>((prev, curr) => {
@@ -65,17 +63,10 @@ export const VercelIntegrationForm = ({
     }, {});
 
     if (configurationId) {
-      if (!isEditMode) {
-        completeIntegration({
-          data: payload,
-          configurationId,
-        });
-      } else {
-        updateIntegration({
-          data: payload,
-          configurationId,
-        });
-      }
+      updateVercelIntegration({
+        data: payload,
+        configurationId,
+      });
     }
   };
 
@@ -182,8 +173,8 @@ export const VercelIntegrationForm = ({
         <Button
           type="submit"
           className="ml-auto"
-          isLoading={isCompleteIntegrationPending || isUpdateIntegrationPending}
-          disabled={isCompleteIntegrationPending || isUpdateIntegrationPending}
+          isLoading={isUpdateVercelIntegrationPending}
+          disabled={isUpdateVercelIntegrationPending}
         >
           Create Links
         </Button>

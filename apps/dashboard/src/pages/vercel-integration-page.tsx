@@ -4,11 +4,11 @@ import { useOrganization, useOrganizationList } from '@clerk/clerk-react';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Card, CardContent, CardHeader } from '@/components/primitives/card';
 import { Skeleton } from '@/components/primitives/skeleton';
-import { useVercelIntegrationDetails } from '@/hooks/use-vercel-integration-details';
-import { useVercelIntegration } from '@/hooks/use-vercel-integration-setup';
+import { useFetchVercelIntegration } from '@/hooks/use-fetch-vercel-integration';
+import { useCreateVercelIntegration } from '@/hooks/use-create-vercel-integration';
 import { useVercelParams } from '@/hooks/use-vercel-params';
 import { VercelIntegrationForm } from '@/components/vercel-integration-form';
-import { useVercelProjects } from '@/hooks/use-vercel-projects';
+import { useFetchVercelIntegrationProjects } from '@/hooks/use-fetch-vercel-integration-projects';
 import { useEnvironment } from '@/context/environment/hooks';
 
 export const VercelIntegrationPage = () => {
@@ -18,22 +18,23 @@ export const VercelIntegrationPage = () => {
     userMemberships: { infinite: true },
   });
   const { configurationId, next, isEditMode } = useVercelParams();
-  const { isPending: isVercelIntegrationPending, data } = useVercelIntegration();
-  const { data: vercelIntegrationDetails, isLoading: isVercelIntegrationDetailsLoading } = useVercelIntegrationDetails({
+  const { isPending: isCreateVercelIntegrationPending, data } = useCreateVercelIntegration();
+  const { data: vercelIntegration, isLoading: isFetchVercelIntegrationLoading } = useFetchVercelIntegration({
     configurationId,
     options: { enabled: !!configurationId && isEditMode && !!currentEnvironment },
   });
-  const { data: vercelProjects, isLoading: isVercelProjectsLoading } = useVercelProjects({
-    configurationId,
-    enabled: !isEditMode ? !!data?.success : true,
-  });
+  const { data: vercelIntegrationProjects, isLoading: isFetchVercelIntegrationProjectsLoading } =
+    useFetchVercelIntegrationProjects({
+      configurationId,
+      enabled: !isEditMode ? !!data?.success : true,
+    });
   const projects = useMemo(
     () =>
-      vercelProjects?.projects.map((project) => ({
+      vercelIntegrationProjects?.projects.map((project) => ({
         value: project.id,
         label: project.name,
       })) ?? [],
-    [vercelProjects]
+    [vercelIntegrationProjects]
   );
   const organizations = useMemo(
     () =>
@@ -45,9 +46,9 @@ export const VercelIntegrationPage = () => {
   );
 
   if (
-    isVercelIntegrationPending ||
-    isVercelProjectsLoading ||
-    isVercelIntegrationDetailsLoading ||
+    isCreateVercelIntegrationPending ||
+    isFetchVercelIntegrationProjectsLoading ||
+    isFetchVercelIntegrationLoading ||
     organizations.length === 0 ||
     !organization
   ) {
@@ -99,12 +100,11 @@ export const VercelIntegrationPage = () => {
               your Novu environments as their bridge url.
             </p>
             <VercelIntegrationForm
-              vercelIntegrationDetails={vercelIntegrationDetails}
+              vercelIntegrationDetails={vercelIntegration}
               organizations={organizations}
               currentOrganizationId={organization.publicMetadata.externalOrgId as string}
               projects={projects}
               configurationId={configurationId}
-              isEditMode={isEditMode}
               next={next}
             />
           </CardContent>

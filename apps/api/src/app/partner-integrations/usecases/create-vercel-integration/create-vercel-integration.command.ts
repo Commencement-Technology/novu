@@ -1,7 +1,7 @@
 import { IsDefined } from 'class-validator';
 import { EnvironmentWithUserCommand } from '../../../shared/commands/project.command';
 
-export class SetVercelConfigurationCommand extends EnvironmentWithUserCommand {
+export class CreateVercelIntegrationCommand extends EnvironmentWithUserCommand {
   @IsDefined()
   vercelIntegrationCode: string;
   @IsDefined()

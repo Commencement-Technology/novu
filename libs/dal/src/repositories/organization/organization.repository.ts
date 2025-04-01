@@ -25,8 +25,8 @@ export class OrganizationRepository implements IOrganizationRepository {
     return this.organizationRepository.updateDefaultLocale(organizationId, defaultLocale);
   }
 
-  findPartnerConfigurationDetails(args: { userId: string; configurationId: string }) {
-    return this.organizationRepository.findPartnerConfigurationDetails(args);
+  findByPartnerConfigurationId(args: { userId: string; configurationId: string }) {
+    return this.organizationRepository.findByPartnerConfigurationId(args);
   }
 
   upsertPartnerConfiguration(args: { organizationId: string; configuration: IPartnerConfiguration }) {

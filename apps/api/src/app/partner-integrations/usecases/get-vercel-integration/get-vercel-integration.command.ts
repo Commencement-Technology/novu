@@ -1,6 +1,5 @@
 import { EnvironmentWithUserCommand } from '../../../shared/commands/project.command';
 
-export class UpdateVercelConfigurationCommand extends EnvironmentWithUserCommand {
-  data: Record<string, string[]>;
+export class GetVercelIntegrationCommand extends EnvironmentWithUserCommand {
   configurationId: string;
 }

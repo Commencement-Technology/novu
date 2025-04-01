@@ -6,11 +6,11 @@ import { OrganizationRepository } from '@novu/dal';
 import { UserSession } from '@novu/testing';
 import { of } from 'rxjs';
 
-import { GetVercelProjects } from './get-vercel-projects.usecase';
+import { GetVercelIntegrationProjects } from './get-vercel-integration-projects.usecase';
 import { ApiException } from '../../../shared/exceptions/api.exception';
 
-describe('GetVercelProjects', function () {
-  let getVercelProjects: GetVercelProjects;
+describe('GetVercelIntegrationProjects', function () {
+  let getVercelIntegrationProjects: GetVercelIntegrationProjects;
   let session: UserSession;
   let httpServiceMock;
   let organizationRepositoryMock;
@@ -33,20 +33,22 @@ describe('GetVercelProjects', function () {
     };
 
     organizationRepositoryMock = {
-      findOne: stub().resolves({
-        partnerConfigurations: [
-          {
-            configurationId: 'test-config-id',
-            accessToken: 'test-token',
-            teamId: 'test-team-id',
-          },
-        ],
-      }),
+      findByPartnerConfigurationId: stub().resolves([
+        {
+          partnerConfigurations: [
+            {
+              configurationId: 'test-config-id',
+              accessToken: 'test-token',
+              teamId: 'test-team-id',
+            },
+          ],
+        },
+      ]),
     };
 
     const moduleRef = await Test.createTestingModule({
       providers: [
-        GetVercelProjects,
+        GetVercelIntegrationProjects,
         {
           provide: HttpService,
           useValue: httpServiceMock,
@@ -60,7 +62,7 @@ describe('GetVercelProjects', function () {
 
     session = new UserSession();
     await session.initialize();
-    getVercelProjects = moduleRef.get<GetVercelProjects>(GetVercelProjects);
+    getVercelIntegrationProjects = moduleRef.get<GetVercelIntegrationProjects>(GetVercelIntegrationProjects);
   });
 
   afterEach(() => {
@@ -75,7 +77,7 @@ describe('GetVercelProjects', function () {
       configurationId: 'test-config-id',
     };
 
-    const result = await getVercelProjects.execute(command);
+    const result = await getVercelIntegrationProjects.execute(command);
 
     expect(result.projects).to.have.length(2);
     expect(result.projects[0]).to.deep.equal({
@@ -86,9 +88,9 @@ describe('GetVercelProjects', function () {
       next: 'next-page-token',
     });
 
-    assert.calledWith(organizationRepositoryMock.findOne, {
-      _id: command.organizationId,
-      'partnerConfigurations.configurationId': command.configurationId,
+    assert.calledWith(organizationRepositoryMock.findByPartnerConfigurationId, {
+      userId: command.userId,
+      configurationId: command.configurationId,
     });
 
     const expectedUrl = `${process.env.VERCEL_BASE_URL}/v10/projects?limit=100&teamId=test-team-id`;
@@ -100,10 +102,10 @@ describe('GetVercelProjects', function () {
   });
 
   it('should throw ApiException when no configuration found', async function () {
-    organizationRepositoryMock.findOne.resolves(null);
+    organizationRepositoryMock.findByPartnerConfigurationId.resolves([]);
 
     try {
-      await getVercelProjects.execute({
+      await getVercelIntegrationProjects.execute({
         userId: session.user._id,
         organizationId: session.organization._id,
         environmentId: session.environment._id,
@@ -112,7 +114,7 @@ describe('GetVercelProjects', function () {
       throw new Error('Should not reach here');
     } catch (error) {
       expect(error).to.be.instanceOf(ApiException);
-      expect(error.message).to.equal('No configuration found for vercel');
+      expect(error.message).to.equal('No partner configuration found.');
       assert.notCalled(httpServiceMock.get);
     }
   });
@@ -121,7 +123,7 @@ describe('GetVercelProjects', function () {
     httpServiceMock.get.throws(new Error('HTTP Error'));
 
     try {
-      await getVercelProjects.execute({
+      await getVercelIntegrationProjects.execute({
         userId: session.user._id,
         organizationId: session.organization._id,
         environmentId: session.environment._id,

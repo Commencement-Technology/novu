@@ -65,6 +65,7 @@ export class ProcessVercelWebhook {
     for (const organization of organizations) {
       let environment: EnvironmentEntity | null;
 
+      // TODO: we should think about how to handle different Vercel environments that are not production or development
       if (vercelEnvironment === 'production') {
         environment = await this.environmentRepository.findOne({
           _organizationId: organization._id,

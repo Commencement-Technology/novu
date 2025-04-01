@@ -19,7 +19,7 @@ export type GetVercelProjects = {
   };
 };
 
-export async function vercelIntegrationSetup({
+export async function createVercelIntegration({
   code,
   configurationId,
   environment,
@@ -34,39 +34,24 @@ export async function vercelIntegrationSetup({
   });
 }
 
-export async function getVercelProjects({
+export async function fetchVercelIntegrationProjects({
   configurationId,
   environment,
 }: {
   configurationId: string;
   environment?: IEnvironment;
 }): Promise<{ data: GetVercelProjects }> {
-  return get(`${partnerIntegrationBaseUrl}/vercel/projects/${configurationId}`, { environment });
+  return get(`${partnerIntegrationBaseUrl}/vercel/${configurationId}/projects`, { environment });
 }
 
-export async function completeVercelIntegration({
-  data,
-  configurationId,
-  environment,
-}: {
-  data: Record<string, string[]>;
-  configurationId: string;
-  environment?: IEnvironment;
-}) {
-  return post(`${partnerIntegrationBaseUrl}/vercel/configuration/complete`, {
-    body: { data, configurationId },
-    environment,
-  });
-}
-
-export async function getVercelConfigurationDetails({
+export async function fetchVercelIntegration({
   configurationId,
   environment,
 }: {
   configurationId?: string | null;
   environment?: IEnvironment;
 }): Promise<{ data: GetVercelConfigurationDetails[] }> {
-  return get(`${partnerIntegrationBaseUrl}/vercel/configuration/${configurationId}`, { environment });
+  return get(`${partnerIntegrationBaseUrl}/vercel/${configurationId}`, { environment });
 }
 
 export async function updateVercelIntegration({
@@ -78,7 +63,7 @@ export async function updateVercelIntegration({
   configurationId: string;
   environment?: IEnvironment;
 }) {
-  return put(`${partnerIntegrationBaseUrl}/vercel/configuration/update`, {
+  return put(`${partnerIntegrationBaseUrl}/vercel`, {
     body: { data, configurationId },
     environment,
   });

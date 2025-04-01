@@ -1,6 +1,6 @@
 import { IsDefined, IsString } from 'class-validator';
 
-export class CompleteAndUpdateVercelIntegrationRequestDto {
+export class UpdateVercelIntegrationRequestDto {
   @IsDefined()
   data: Record<string, string[]>;
 

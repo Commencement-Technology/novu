@@ -1,7 +1,7 @@
 import { IsString, IsDefined, IsOptional } from 'class-validator';
 import { EnvironmentWithUserCommand } from '../../../shared/commands/project.command';
 
-export class GetVercelProjectsCommand extends EnvironmentWithUserCommand {
+export class GetVercelIntegrationProjectsCommand extends EnvironmentWithUserCommand {
   @IsDefined()
   @IsString()
   configurationId: string;

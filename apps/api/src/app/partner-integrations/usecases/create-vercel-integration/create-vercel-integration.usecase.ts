@@ -2,19 +2,21 @@ import { HttpService } from '@nestjs/axios';
 import { Injectable } from '@nestjs/common';
 import { lastValueFrom } from 'rxjs';
 import { OrganizationRepository, PartnerTypeEnum } from '@novu/dal';
+import { AnalyticsService } from '@novu/application-generic';
 
 import { ApiException } from '../../../shared/exceptions/api.exception';
-import { SetupVercelConfigurationResponseDto } from '../../dtos/setup-vercel-integration-response.dto';
-import { SetVercelConfigurationCommand } from './set-vercel-configuration.command';
+import { CreateVercelIntegrationResponseDto } from '../../dtos/create-vercel-integration-response.dto';
+import { CreateVercelIntegrationCommand } from './create-vercel-integration.command';
 
 @Injectable()
-export class SetVercelConfiguration {
+export class CreateVercelIntegration {
   constructor(
     private httpService: HttpService,
-    private organizationRepository: OrganizationRepository
+    private organizationRepository: OrganizationRepository,
+    private analyticsService: AnalyticsService
   ) {}
 
-  async execute(command: SetVercelConfigurationCommand): Promise<SetupVercelConfigurationResponseDto> {
+  async execute(command: CreateVercelIntegrationCommand): Promise<CreateVercelIntegrationResponseDto> {
     try {
       const tokenData = await this.getVercelToken(command.vercelIntegrationCode);
 
@@ -28,6 +30,10 @@ export class SetVercelConfiguration {
       await this.organizationRepository.upsertPartnerConfiguration({
         organizationId: command.organizationId,
         configuration,
+      });
+
+      this.analyticsService.track('Create Vercel Integration - [Partner Integrations]', command.userId, {
+        _organization: command.organizationId,
       });
 
       return {

@@ -6,9 +6,9 @@ on:
         description: 'Environment to deploy to'
         required: true
         type: choice
-        default: development
+        default: Development
         options:
-          - development
+          - Development
           - production-us
           - production-eu
           - production-both
@@ -48,8 +48,8 @@ jobs:
           services=()
 
           # Collect selected environments
-          if [ "${{ github.event.inputs.environment }}" == "development" ]; then
-            envs+=("\"development\"")
+          if [ "${{ github.event.inputs.environment }}" == "Development" ]; then
+            envs+=("\"Development\"")
           fi
           if [ "${{ github.event.inputs.environment }}" == "production-us" ]; then
             envs+=("\"production-us\"")
@@ -90,6 +90,7 @@ jobs:
     needs: prepare-matrix
     timeout-minutes: 60
     runs-on: ubuntu-latest
+    environment: ${{ fromJson(needs.prepare-matrix.outputs.env_matrix).environment }}
     outputs:
       docker_image: ${{ steps.build-image.outputs.IMAGE }}
     strategy:
@@ -128,7 +129,7 @@ jobs:
       - name: Prepare Variables
         run: |
           set -e
-          if [[ "$(echo ${{ fromJson(needs.prepare-matrix.outputs.env_matrix).environment }})" == "development" ]]; then
+          if [[ "$(echo ${{ fromJson(needs.prepare-matrix.outputs.env_matrix).environment }})" == "Development" ]]; then
             echo "AWS_REGION=eu-west-2" >> $GITHUB_ENV
           else
             echo "AWS_REGION=us-east-1" >> $GITHUB_ENV
@@ -137,6 +138,8 @@ jobs:
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
+        env:
+          AWS_REGION: ${{ env.AWS_REGION }}
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID}}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

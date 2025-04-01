@@ -1,17 +1,4 @@
-FROM node:20-alpine3.19 AS dev_base
-RUN apk add g++ make py3-pip
-
-ENV NX_DAEMON=false
-
-RUN npm i pm2 -g
-RUN npm --no-update-notifier --no-fund --global install pnpm@9.11.0
-RUN pnpm --version
-
-USER 1000
-WORKDIR /usr/src/app
-
-# ------- DEV BUILD ----------
-FROM dev_base AS dev
+FROM ghcr.io/novuhq/novu/base:1.0.0 AS dev
 ARG PACKAGE_PATH
 
 COPY --chown=1000:1000 ./meta .

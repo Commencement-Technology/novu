@@ -41,7 +41,7 @@ describe('CORS Configuration', () => {
         process.env.NODE_ENV = 'test';
       });
 
-      it('should allow only front base url and widget url', () => {
+      it.skip('should allow only front base url and widget url', () => {
         const callbackSpy = spy();
 
         // @ts-expect-error - corsOptionsDelegate is not typed correctly

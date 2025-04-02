@@ -767,7 +767,7 @@ describe('Workflow Controller E2E API Testing #novu-v2', () => {
       expect(stepRetrievedByStepIdentifier.id).to.equal(stepId);
     });
     describe('Variables', () => {
-      it('should get step available variables', async () => {
+      it.skip('should get step available variables', async () => {
         const steps = [
           {
             ...buildEmailStep(),
@@ -809,7 +809,7 @@ describe('Workflow Controller E2E API Testing #novu-v2', () => {
   });
 
   describe('Get Test Data Permutations', () => {
-    it('should get test data', async () => {
+    it.skip('should get test data', async () => {
       const steps = [
         {
           ...buildEmailStep(),

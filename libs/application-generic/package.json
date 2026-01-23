@@ -81,7 +81,7 @@
     "ioredis": "^5.2.4",
     "jsonwebtoken": "9.0.0",
     "@launchdarkly/node-server-sdk": "^9.7.3",
-    "lodash": "^4.17.15",
+    "lodash": "^4.17.23",
     "mixpanel": "^0.17.0",
     "nanoid": "^3.1.20",
     "nestjs-otel": "6.1.1",
